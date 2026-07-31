@@ -1,0 +1,14 @@
+.git
+.gitattributes
+__pycache__
+*.pyc
+.venv
+venv
+.pytest_cache
+.env
+tests
+README.md
+
+# Build/release outputs must never be copied back into the image being built.
+release/
+*.tar

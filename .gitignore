@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+.env
+
+# Built release payload: regenerate with scripts/build_release.sh rather than
+# committing built images/checksums/secrets to source control.
+release/docker-images/*.tar
+release/compose/.env
+release/backups/
+release/checksums/SHA256SUMS.txt

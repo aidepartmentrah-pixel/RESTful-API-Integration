@@ -1,0 +1,463 @@
+openapi: 3.0.3
+info:
+  title: Hospital Directory Read API
+  version: 1.0.0
+  description: Read-only internal API for patients, doctors, and workers. Used
+    by HCAT and HCopilot.
+servers:
+- url: http://localhost:6000/api/directory/v1
+  description: Mock API on Lenovo
+- url: https://TO-BE-ASSIGNED/api/directory/v1
+  description: Production API
+security:
+- ApiKeyAuth: []
+tags:
+- name: Health
+- name: Patients
+- name: Doctors
+- name: Workers
+paths:
+  /health:
+    get:
+      tags:
+      - Health
+      summary: Check API health
+      security: []
+      responses:
+        '200':
+          description: API and required dependency are healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '503':
+          description: API dependency unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+  /patients:
+    get:
+      tags:
+      - Patients
+      summary: Search patients
+      description: Search is required. Matches available patient ID or name.
+      parameters:
+      - $ref: '#/components/parameters/PatientQuery'
+      - $ref: '#/components/parameters/PatientIdFilter'
+      - $ref: '#/components/parameters/Limit'
+      - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: Matching patients
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PatientListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /patients/{patient_id}:
+    get:
+      tags:
+      - Patients
+      summary: Get one exact patient
+      parameters:
+      - name: patient_id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Patient
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Patient'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /doctors:
+    get:
+      tags:
+      - Doctors
+      summary: Search or list doctors
+      parameters:
+      - $ref: '#/components/parameters/OptionalQuery'
+      - $ref: '#/components/parameters/ActiveOnly'
+      - $ref: '#/components/parameters/Limit'
+      - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: Matching doctors
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DoctorListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /doctors/{doctor_id}:
+    get:
+      tags:
+      - Doctors
+      summary: Get one doctor
+      parameters:
+      - name: doctor_id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Doctor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Doctor'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /workers:
+    get:
+      tags:
+      - Workers
+      summary: Search or list workers
+      parameters:
+      - $ref: '#/components/parameters/OptionalQuery'
+      - $ref: '#/components/parameters/ActiveOnly'
+      - $ref: '#/components/parameters/Limit'
+      - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: Matching workers
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkerListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /workers/{employee_id}:
+    get:
+      tags:
+      - Workers
+      summary: Get one worker
+      parameters:
+      - name: employee_id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Worker
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Worker'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+  parameters:
+    PatientQuery:
+      name: q
+      in: query
+      required: false
+      description: General patient search text (matches patient ID or name). At
+        least one of q/patient_id is required on this endpoint. Name searches
+        should contain at least two characters.
+      schema:
+        type: string
+        minLength: 1
+    OptionalQuery:
+      name: q
+      in: query
+      required: false
+      schema:
+        type: string
+        minLength: 1
+    PatientIdFilter:
+      name: patient_id
+      in: query
+      required: false
+      schema:
+        type: string
+    ActiveOnly:
+      name: active_only
+      in: query
+      required: false
+      schema:
+        type: boolean
+        default: true
+    Limit:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 500
+        default: 100
+    Offset:
+      name: offset
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+  schemas:
+    Patient:
+      type: object
+      required:
+      - patient_id
+      - full_name
+      properties:
+        patient_id:
+          type: string
+          example: P-10025
+        full_name:
+          type: string
+          example: Ahmad Ali
+        first_name:
+          type: string
+          nullable: true
+          example: Ahmad
+        last_name:
+          type: string
+          nullable: true
+          example: Ali
+        birth_date:
+          type: string
+          format: date
+          nullable: true
+        age:
+          type: integer
+          minimum: 0
+          maximum: 150
+          nullable: true
+        sex:
+          type: string
+          nullable: true
+    Doctor:
+      type: object
+      required:
+      - doctor_id
+      - full_name
+      - is_active
+      properties:
+        doctor_id:
+          type: string
+          example: D-1025
+        full_name:
+          type: string
+          example: Dr. Ahmad Mohammed
+        specialty_id:
+          type: string
+          nullable: true
+        specialty_name:
+          type: string
+          nullable: true
+        department_id:
+          type: string
+          nullable: true
+        department_name:
+          type: string
+          nullable: true
+        is_active:
+          type: boolean
+    Worker:
+      type: object
+      required:
+      - employee_id
+      - full_name
+      - is_active
+      properties:
+        employee_id:
+          type: string
+          example: E-5541
+        full_name:
+          type: string
+          example: Hassan Ibrahim
+        job_id:
+          type: string
+          nullable: true
+        job_title:
+          type: string
+          nullable: true
+        department_id:
+          type: string
+          nullable: true
+        section_id:
+          type: string
+          nullable: true
+        administration_id:
+          type: string
+          nullable: true
+        is_manager:
+          type: boolean
+          nullable: true
+        is_active:
+          type: boolean
+    PatientListResponse:
+      allOf:
+      - $ref: '#/components/schemas/ListEnvelope'
+      - type: object
+        properties:
+          items:
+            type: array
+            items:
+              $ref: '#/components/schemas/Patient'
+    DoctorListResponse:
+      allOf:
+      - $ref: '#/components/schemas/ListEnvelope'
+      - type: object
+        properties:
+          items:
+            type: array
+            items:
+              $ref: '#/components/schemas/Doctor'
+    WorkerListResponse:
+      allOf:
+      - $ref: '#/components/schemas/ListEnvelope'
+      - type: object
+        properties:
+          items:
+            type: array
+            items:
+              $ref: '#/components/schemas/Worker'
+    ListEnvelope:
+      type: object
+      required:
+      - success
+      - items
+      - total
+      - limit
+      - offset
+      properties:
+        success:
+          type: boolean
+          example: true
+        items:
+          type: array
+          items: {}
+        total:
+          type: integer
+          minimum: 0
+        limit:
+          type: integer
+          minimum: 1
+        offset:
+          type: integer
+          minimum: 0
+    Error:
+      type: object
+      required:
+      - error
+      - message
+      properties:
+        error:
+          type: string
+          example: PATIENT_NOT_FOUND
+        message:
+          type: string
+          example: The requested patient was not found
+    HealthResponse:
+      type: object
+      required:
+      - status
+      properties:
+        status:
+          type: string
+          enum:
+          - healthy
+          - unhealthy
+        service:
+          type: string
+          description: Optional. Not part of the contract HCAT/HCopilot depend
+            on; a vendor may include it if convenient for their own operations.
+        api_version:
+          type: string
+          description: Optional, same note as service.
+        timestamp:
+          type: string
+          format: date-time
+          description: Optional, same note as service.
+      additionalProperties: true
+  responses:
+    BadRequest:
+      description: Malformed request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unauthorized:
+      description: Missing or invalid API key
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: Requested record not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    ValidationError:
+      description: Invalid parameter value
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    ServerError:
+      description: Unexpected server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    ServiceUnavailable:
+      description: API dependency unavailable
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
