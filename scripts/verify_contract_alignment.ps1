@@ -15,30 +15,42 @@ $PassCount = 0
 $FailCount = 0
 
 function Invoke-DirectoryApi {
+    # Deliberately NOT using Invoke-WebRequest. Its handling of error
+    # response bodies (400+) has proven inconsistent across different
+    # Windows PowerShell builds/machines - $_.ErrorDetails.Message worked on
+    # one machine and came back empty on another for the identical request.
+    # Talking to HttpWebRequest directly sidesteps that: we own the response
+    # object on both the success AND error path, so reading its stream is
+    # reliable regardless of which machine this runs on.
     param([string]$Path, [switch]$WithAuth)
     $Uri = "$BaseUrl$Path"
-    $Headers = @{}
-    if ($WithAuth) { $Headers["X-API-Key"] = $ApiKey }
     $Result = [PSCustomObject]@{ StatusCode = $null; Body = $null }
+
+    $Request = [System.Net.HttpWebRequest]::Create($Uri)
+    $Request.Method = "GET"
+    $Request.Timeout = 10000
+    $Request.Accept = "application/json"
+    if ($WithAuth) { $Request.Headers.Add("X-API-Key", $ApiKey) }
+
+    $Response = $null
     try {
-        $Response = Invoke-WebRequest -Uri $Uri -Headers $Headers -Method Get -TimeoutSec 10 -UseBasicParsing
-        $Result.StatusCode = [int]$Response.StatusCode
-        $Bytes = $Response.RawContentStream.ToArray()
-        $Utf8Text = [System.Text.Encoding]::UTF8.GetString($Bytes)
-        try { $Result.Body = $Utf8Text | ConvertFrom-Json } catch { $Result.Body = $Utf8Text }
-    } catch {
-        $WebException = $_.Exception
-        if ($WebException.Response) {
-            $Result.StatusCode = [int]$WebException.Response.StatusCode
-        }
-        # Invoke-WebRequest's own error handling already drains the response
-        # stream before this catch runs (confirmed: GetResponseStream() here
-        # reads 0 bytes) - $_.ErrorDetails.Message is where the cmdlet caches
-        # the body text itself, and is what actually has content.
-        if ($_.ErrorDetails -and $_.ErrorDetails.Message) {
-            try { $Result.Body = $_.ErrorDetails.Message | ConvertFrom-Json } catch { $Result.Body = $_.ErrorDetails.Message }
+        $Response = $Request.GetResponse()
+    } catch [System.Net.WebException] {
+        $Response = $_.Exception.Response
+        if (-not $Response) {
+            $Result.Body = $_.Exception.Message
+            return $Result
         }
     }
+
+    $Result.StatusCode = [int]$Response.StatusCode
+    $Stream = $Response.GetResponseStream()
+    $MemStream = New-Object System.IO.MemoryStream
+    $Stream.CopyTo($MemStream)
+    $Utf8Text = [System.Text.Encoding]::UTF8.GetString($MemStream.ToArray())
+    try { $Result.Body = $Utf8Text | ConvertFrom-Json } catch { $Result.Body = $Utf8Text }
+    $Response.Close()
+
     return $Result
 }
 
