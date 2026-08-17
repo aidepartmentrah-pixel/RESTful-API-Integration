@@ -54,8 +54,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PatientListResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '422':
@@ -328,6 +326,9 @@ components:
         department_id:
           type: string
           nullable: true
+        department_name:
+          type: string
+          nullable: true
         section_id:
           type: string
           nullable: true
@@ -425,12 +426,6 @@ components:
           description: Optional, same note as service.
       additionalProperties: true
   responses:
-    BadRequest:
-      description: Malformed request
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
     Unauthorized:
       description: Missing or invalid API key
       content:

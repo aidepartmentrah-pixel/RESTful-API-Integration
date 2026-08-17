@@ -9,6 +9,7 @@ class Worker(BaseModel):
     job_id: str | None = None
     job_title: str | None = None
     department_id: str | None = None
+    department_name: str | None = None
     section_id: str | None = None
     administration_id: str | None = None
     is_manager: bool | None = None

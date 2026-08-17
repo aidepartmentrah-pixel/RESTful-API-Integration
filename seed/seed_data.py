@@ -131,7 +131,8 @@ def seed_workers(db) -> None:
         employee_id = f"E-{5000 + index}"
         full_name, _, _ = random_name()
         job_title = random.choice(JOB_TITLES)
-        department_id, _ = random.choice(DEPARTMENTS)
+        department_id, department_name = random.choice(DEPARTMENTS)
+        has_department = random.random() < 0.85
         is_active = random.random() < 0.85
         is_manager = random.choice([True, False]) if random.random() < 0.8 else None
 
@@ -141,7 +142,8 @@ def seed_workers(db) -> None:
                 full_name=full_name,
                 job_id=f"{200 + (index % 15)}" if random.random() < 0.8 else None,
                 job_title=job_title,
-                department_id=department_id,
+                department_id=department_id if has_department else None,
+                department_name=department_name if has_department else None,
                 section_id=f"{random.randint(1, 12)}" if random.random() < 0.85 else None,
                 administration_id=f"{random.randint(1, 5)}" if random.random() < 0.85 else None,
                 is_manager=is_manager,

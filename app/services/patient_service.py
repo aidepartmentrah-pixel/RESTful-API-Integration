@@ -14,9 +14,9 @@ def search_patients(
 ) -> tuple[list[Patient], int]:
     if not any([q, patient_id]):
         raise ApiError(
-            status_code=400,
-            error="MISSING_SEARCH_CRITERIA",
-            message="At least one of q or patient_id is required",
+            status_code=422,
+            error="VALIDATION_ERROR",
+            message="At least one of 'q' or 'patient_id' is required",
         )
 
     return patient_repository.search_patients(db, q, patient_id, limit, offset)

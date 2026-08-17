@@ -15,6 +15,7 @@ class Worker(Base):
     job_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     job_title: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
     department_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    department_name: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
     section_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
     administration_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
 

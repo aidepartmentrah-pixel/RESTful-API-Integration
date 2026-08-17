@@ -1,7 +1,7 @@
 def test_patient_search_requires_criterion(client, auth_headers):
     response = client.get("/api/directory/v1/patients", headers=auth_headers)
-    assert response.status_code == 400
-    assert response.json()["error"] == "MISSING_SEARCH_CRITERIA"
+    assert response.status_code == 422
+    assert response.json()["error"] == "VALIDATION_ERROR"
 
 
 def test_patient_search_by_q(client, auth_headers):

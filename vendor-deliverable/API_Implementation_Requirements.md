@@ -112,6 +112,7 @@ bolted onto Patient.
 | `job_id` | string | No | Yes | Low priority for the hospital application today, but not removed from the contract. |
 | `job_title` | string | No | Yes | |
 | `department_id` | string | No | Yes | |
+| `department_name` | string | No | Yes | |
 | `section_id` | string | No | Yes | |
 | `administration_id` | string | No | Yes | |
 | `is_manager` | boolean | No | Yes | Display-only. |
@@ -145,8 +146,8 @@ contract HCAT/HCopilot depend on. The reference mock returns `status` only.
 | `offset` | No | Default 0, min 0. |
 
 **At least one** of `q`, `patient_id` is required. A request with neither
-returns `400 Bad Request` (`MISSING_SEARCH_CRITERIA`) — patient enumeration
-without any criterion is not supported.
+returns `422` (`VALIDATION_ERROR`) — patient enumeration without any
+criterion is not supported.
 
 `q` should match against whatever of these the source system can search:
 patient ID, full name. Consuming applications wait for at least 2 characters
@@ -287,9 +288,9 @@ must not be conflated:
   (`503`) — see section 7.
 
 - **A malformed/missing search parameter is different from "no results."**
-  `GET /patients` with no `q`/`patient_id` at all is `400 Bad Request`
-  (`MISSING_SEARCH_CRITERIA`), not an empty `200`. The request itself is
-  invalid, independent of whether any data would have matched.
+  `GET /patients` with no `q`/`patient_id` at all is `422`
+  (`VALIDATION_ERROR`), not an empty `200`. The request itself is invalid,
+  independent of whether any data would have matched.
 
 ---
 
@@ -313,13 +314,12 @@ internal exception detail in either field.
 
 | Status | When | `error` code |
 |---|---|---|
-| `400` | Patient search called with no search criterion | `MISSING_SEARCH_CRITERIA` |
 | `401` | Missing or invalid `X-API-Key` | `UNAUTHORIZED` |
 | `404` | Exact patient not found | `PATIENT_NOT_FOUND` |
 | `404` | Exact doctor not found | `DOCTOR_NOT_FOUND` |
 | `404` | Exact worker not found | `WORKER_NOT_FOUND` |
 | `405` | Unsupported HTTP method on a valid path | `METHOD_NOT_ALLOWED` |
-| `422` | Parameter present but invalid (e.g. `limit=9999`, out of the 1–500 range) | `VALIDATION_ERROR` |
+| `422` | Patient search called with no search criterion, or a parameter present but invalid (e.g. `limit=9999`, out of the 1–500 range) | `VALIDATION_ERROR` |
 | `500` | Unexpected server error | `INTERNAL_SERVER_ERROR` |
 | `503` | API is running but its data source is unreachable | (see health endpoint, section 2.4) |
 
