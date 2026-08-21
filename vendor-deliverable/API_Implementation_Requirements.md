@@ -150,9 +150,19 @@ returns `422` (`VALIDATION_ERROR`) — patient enumeration without any
 criterion is not supported.
 
 `q` should match against whatever of these the source system can search:
-patient ID, full name. Consuming applications wait for at least 2 characters
-before firing a free-text name search, but this is a client-side convention,
-not a rule the API enforces — the API accepts any non-empty `q`.
+patient ID, full name.
+
+**Confirmed against the real vendor server**: unlike doctors/workers, a
+partial name in `q` is *not* accepted for a fuzzy match — a single-word `q`
+returns `422` (`VALIDATION_ERROR`), message *"Please enter the patient's
+full name (first, father and last name), not just part of the name"*. Only
+a complete name is accepted. This mock enforces the same class of
+validation (reject a bare single word) using a 2-word minimum rather than
+the vendor's literal 3-word rule, since this mock's `Patient` model only
+stores first+last name (no father/middle name field) — see
+`app/services/patient_service.py`. Consuming applications must not fire a
+patient name search on partial/incremental input the way they might for
+doctors.
 
 ### 3.2 `GET /patients/{patient_id}`
 

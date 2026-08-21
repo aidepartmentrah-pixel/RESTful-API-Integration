@@ -6,7 +6,7 @@ def test_patient_search_requires_criterion(client, auth_headers):
 
 def test_patient_search_by_q(client, auth_headers):
     response = client.get(
-        "/api/directory/v1/patients", params={"q": "Ahmad"}, headers=auth_headers
+        "/api/directory/v1/patients", params={"q": "Ahmad Ali"}, headers=auth_headers
     )
     assert response.status_code == 200
     body = response.json()
@@ -17,12 +17,22 @@ def test_patient_search_by_q(client, auth_headers):
 
 def test_patient_search_no_results(client, auth_headers):
     response = client.get(
-        "/api/directory/v1/patients", params={"q": "NoSuchPatientXYZ"}, headers=auth_headers
+        "/api/directory/v1/patients", params={"q": "NoSuch Patient"}, headers=auth_headers
     )
     assert response.status_code == 200
     body = response.json()
     assert body["total"] == 0
     assert body["items"] == []
+
+
+def test_patient_search_single_word_rejected(client, auth_headers):
+    # Confirmed real-API behavior: a partial (single-word) name search is
+    # rejected, not silently matched. See patient_service.search_patients.
+    response = client.get(
+        "/api/directory/v1/patients", params={"q": "Ahmad"}, headers=auth_headers
+    )
+    assert response.status_code == 422
+    assert response.json()["error"] == "VALIDATION_ERROR"
 
 
 def test_exact_patient_found(client, auth_headers):

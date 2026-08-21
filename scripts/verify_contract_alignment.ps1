@@ -1,7 +1,7 @@
 param(
     [string]$BaseUrl = "http://localhost:6000/api/directory/v1",
     [string]$ApiKey = "change_me",
-    [string]$PatientSearch = "Johnson"
+    [string]$PatientSearch = "Danielle Johnson"
 )
 
 # Hard pass/fail regression suite for THIS mock, proving it matches the
@@ -86,7 +86,12 @@ $r = Invoke-DirectoryApi -Path "/patients" -WithAuth
 Assert-Check "GET /patients (no criteria) -> 422" ($r.StatusCode -eq 422) "(got $($r.StatusCode))"
 Assert-Check "  error == VALIDATION_ERROR" ($r.Body.error -eq "VALIDATION_ERROR") "(got $($r.Body.error))"
 
-# 3. Patient search field set
+# 3. Patient search rejects a partial (single-word) name, same as the real API
+$r = Invoke-DirectoryApi -Path "/patients?q=$([uri]::EscapeDataString($PatientSearch.Split(' ')[0]))" -WithAuth
+Assert-Check "GET /patients?q=<single word> -> 422" ($r.StatusCode -eq 422) "(got $($r.StatusCode))"
+Assert-Check "  error == VALIDATION_ERROR" ($r.Body.error -eq "VALIDATION_ERROR") "(got $($r.Body.error))"
+
+# 4. Patient search field set
 $r = Invoke-DirectoryApi -Path "/patients?q=$([uri]::EscapeDataString($PatientSearch))&limit=5" -WithAuth
 Assert-Check "GET /patients?q=... -> 200" ($r.StatusCode -eq 200) "(got $($r.StatusCode))"
 $PatientFound = $r.Success -or ($r.Body -and $r.Body.items -and $r.Body.items.Count -gt 0)
@@ -97,7 +102,7 @@ if ($FirstPatient) {
     Assert-Check "  patient field set exactly matches contract" (Test-FieldSet $FirstPatient @("patient_id","full_name","first_name","last_name","birth_date","age","sex")) "(fields: $($FirstPatient.PSObject.Properties.Name -join ', '))"
 }
 
-# 4. Patient exact lookup + 404
+# 5. Patient exact lookup + 404
 if ($FirstPatient) {
     $r = Invoke-DirectoryApi -Path "/patients/$($FirstPatient.patient_id)" -WithAuth
     Assert-Check "GET /patients/{id} -> 200" ($r.StatusCode -eq 200) "(got $($r.StatusCode))"
@@ -106,7 +111,7 @@ $r = Invoke-DirectoryApi -Path "/patients/DOES-NOT-EXIST-999" -WithAuth
 Assert-Check "GET /patients/{bogus} -> 404" ($r.StatusCode -eq 404) "(got $($r.StatusCode))"
 Assert-Check "  error == PATIENT_NOT_FOUND" ($r.Body.error -eq "PATIENT_NOT_FOUND") "(got $($r.Body.error))"
 
-# 5. Doctors field set + active_only
+# 6. Doctors field set + active_only
 $r = Invoke-DirectoryApi -Path "/doctors?limit=5" -WithAuth
 Assert-Check "GET /doctors -> 200" ($r.StatusCode -eq 200) "(got $($r.StatusCode))"
 $DefaultTotal = $r.Body.total
@@ -126,7 +131,7 @@ $r = Invoke-DirectoryApi -Path "/doctors/DOES-NOT-EXIST-999" -WithAuth
 Assert-Check "GET /doctors/{bogus} -> 404" ($r.StatusCode -eq 404) "(got $($r.StatusCode))"
 Assert-Check "  error == DOCTOR_NOT_FOUND" ($r.Body.error -eq "DOCTOR_NOT_FOUND") "(got $($r.Body.error))"
 
-# 6. Workers field set (must include department_name now)
+# 7. Workers field set (must include department_name now)
 $r = Invoke-DirectoryApi -Path "/workers?limit=5" -WithAuth
 Assert-Check "GET /workers -> 200" ($r.StatusCode -eq 200) "(got $($r.StatusCode))"
 $FirstWorker = $null
@@ -142,7 +147,7 @@ $r = Invoke-DirectoryApi -Path "/workers/DOES-NOT-EXIST-999" -WithAuth
 Assert-Check "GET /workers/{bogus} -> 404" ($r.StatusCode -eq 404) "(got $($r.StatusCode))"
 Assert-Check "  error == WORKER_NOT_FOUND" ($r.Body.error -eq "WORKER_NOT_FOUND") "(got $($r.Body.error))"
 
-# 7. Auth
+# 8. Auth
 $r = Invoke-DirectoryApi -Path "/doctors?limit=1"
 Assert-Check "GET /doctors with no key -> 401" ($r.StatusCode -eq 401) "(got $($r.StatusCode))"
 Assert-Check "  error == UNAUTHORIZED" ($r.Body.error -eq "UNAUTHORIZED") "(got $($r.Body.error))"

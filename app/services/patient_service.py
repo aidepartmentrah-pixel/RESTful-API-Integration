@@ -19,6 +19,19 @@ def search_patients(
             message="At least one of 'q' or 'patient_id' is required",
         )
 
+    # The real vendor API rejects a name search that isn't a complete name
+    # (confirmed: a single word gets a 422). Our Patient model only stores
+    # first+last (no father/middle name), so we can't reproduce the vendor's
+    # exact 3-word rule -- this enforces the same class of validation (a
+    # bare word isn't a name search) using the 2-word minimum our own data
+    # actually supports.
+    if q and len(q.split()) < 2:
+        raise ApiError(
+            status_code=422,
+            error="VALIDATION_ERROR",
+            message="Please enter the patient's full name, not just part of the name",
+        )
+
     return patient_repository.search_patients(db, q, patient_id, limit, offset)
 
 
