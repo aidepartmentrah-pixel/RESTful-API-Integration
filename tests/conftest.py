@@ -47,25 +47,30 @@ def client(db_session):
 
     db_session.add(
         Patient(
-            patient_id="P-10025",
-            full_name="Ahmad Ali",
-            first_name="Ahmad",
-            last_name="Ali",
+            patient_id="10025",
+            first_name_ar="Ahmad",
+            first_name_en="Ahmad",
+            father_name_ar="Mohammed",
+            father_name_en="Mohammed",
+            last_name_ar="Ali",
+            last_name_en="Ali",
             age=46,
-            sex="M",
+            sex="Male",
         )
     )
     db_session.add(
         Doctor(
-            doctor_id="D-1025",
+            doctor_id="1025",
             full_name="Dr. Ahmad Mohammed",
+            first_name="Ahmad",
+            father_name="Mohammed",
             specialty_name="Cardiology",
             is_active=True,
         )
     )
     db_session.add(
         Doctor(
-            doctor_id="D-9999",
+            doctor_id="9999",
             full_name="Dr. Inactive One",
             specialty_name="Neurology",
             is_active=False,
@@ -73,10 +78,17 @@ def client(db_session):
     )
     db_session.add(
         Worker(
-            employee_id="E-5541",
+            employee_id="5541",
             full_name="Hassan Ibrahim",
             job_title="Quality Assurance Specialist",
             is_active=True,
+        )
+    )
+    db_session.add(
+        Worker(
+            employee_id="5542",
+            full_name="Inactive Worker",
+            is_active=False,
         )
     )
     db_session.commit()

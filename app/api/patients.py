@@ -17,12 +17,16 @@ router = APIRouter(
 @router.get("", response_model=PatientListResponse)
 def search_patients(
     db: DbSession,
-    q: Annotated[str | None, Query(min_length=1)] = None,
     patient_id: Annotated[str | None, Query()] = None,
+    first_name: Annotated[str | None, Query(min_length=1)] = None,
+    father_name: Annotated[str | None, Query(min_length=1)] = None,
+    last_name: Annotated[str | None, Query(min_length=1)] = None,
     limit: LimitParam = 100,
     offset: OffsetParam = 0,
 ) -> PatientListResponse:
-    items, total = patient_service.search_patients(db, q, patient_id, limit, offset)
+    items, total = patient_service.search_patients(
+        db, patient_id, first_name, father_name, last_name, limit, offset
+    )
     return PatientListResponse(
         items=[Patient.model_validate(item) for item in items],
         total=total,

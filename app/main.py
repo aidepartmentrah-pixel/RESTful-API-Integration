@@ -13,8 +13,8 @@ class UTF8JSONResponse(JSONResponse):
 
 app = FastAPI(
     title="Hospital Directory Read API",
-    version="1.0.0",
-    description="Read-only internal API for patient visits, doctors, and workers. "
+    version="1.1.0",
+    description="Read-only internal API for patients, doctors, and workers. "
     "Used by HCAT and HCopilot.",
     openapi_url="/api/directory/v1/openapi.json",
     docs_url="/api/directory/v1/docs",
@@ -71,5 +71,5 @@ async def validation_exception_handler(
 async def unhandled_exception_handler(request: Request, exc: Exception) -> UTF8JSONResponse:
     return UTF8JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        content={"error": "INTERNAL_SERVER_ERROR", "message": "An unexpected error occurred"},
+        content={"error": "SERVER_ERROR", "message": "An unexpected error occurred"},
     )

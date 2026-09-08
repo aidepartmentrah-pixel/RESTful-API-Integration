@@ -80,3 +80,9 @@ tests/            pytest suite (health, auth, patients, doctors, workers)
 This mock API and the future production API must expose identical externally observable
 behavior (paths, parameters, field names, types, status codes, auth). Only the data source
 differs. See `Hospital_Directory_API_OpenAPI.yaml` for the authoritative contract.
+
+## Real vendor evidence
+
+`real-evidence/` holds raw, unedited captures from actual HTTP round trips against the real
+vendor server (not this mock) — confirmed facts, with sources, not inference. Check there
+before assuming something about the real server's behavior is unknown.

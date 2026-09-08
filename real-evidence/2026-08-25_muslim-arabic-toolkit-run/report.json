@@ -1,0 +1,492 @@
+[
+    {
+        "Area":  "health",
+        "Title":  "GET /health -> 200, no auth",
+        "Tag":  "SPEC_UNVERIFIED",
+        "Method":  "GET",
+        "Path":  "/health",
+        "StatusCode":  200,
+        "Verdict":  "PASS",
+        "Finding":  "status=healthy fields=status,service,api_version,timestamp"
+    },
+    {
+        "Area":  "auth",
+        "Title":  "No API key -> 401",
+        "Tag":  "MOCK_ONLY",
+        "Method":  "GET",
+        "Path":  "",
+        "StatusCode":  401,
+        "Verdict":  "PASS",
+        "Finding":  "error=UNAUTHORIZED"
+    },
+    {
+        "Area":  "auth",
+        "Title":  "Missing-key vs wrong-key message identical",
+        "Tag":  "MOCK_ONLY",
+        "Method":  "GET",
+        "Path":  "",
+        "StatusCode":  null,
+        "Verdict":  "OBSERVED",
+        "Finding":  "no-key message='Missing or invalid API key'"
+    },
+    {
+        "Area":  "auth",
+        "Title":  "Wrong API key -> 401, same message as missing key",
+        "Tag":  "MOCK_ONLY",
+        "Method":  "GET",
+        "Path":  "",
+        "StatusCode":  401,
+        "Verdict":  "PASS",
+        "Finding":  "wrong-key message='Missing or invalid API key'"
+    },
+    {
+        "Area":  "auth",
+        "Title":  "Correct API key -> not 401",
+        "Tag":  "MOCK_ONLY",
+        "Method":  "GET",
+        "Path":  "",
+        "StatusCode":  200,
+        "Verdict":  "PASS",
+        "Finding":  "status=200"
+    },
+    {
+        "Area":  "patient_search",
+        "Title":  "No criteria -> 422 VALIDATION_ERROR",
+        "Tag":  "CONFIRMED_REAL",
+        "Method":  "GET",
+        "Path":  "",
+        "StatusCode":  422,
+        "Verdict":  "PASS",
+        "Finding":  "error=VALIDATION_ERROR message=At least one of 'q' or 'patient_id' is required"
+    },
+    {
+        "Area":  "patient_search",
+        "Title":  "Single Arabic word 'Ø¹ÙÙ' -> 422 VALIDATION_ERROR",
+        "Tag":  "CONFIRMED_REAL",
+        "Method":  "GET",
+        "Path":  "/patients?q=Ø¹ÙÙ",
+        "StatusCode":  422,
+        "Verdict":  "PASS",
+        "Finding":  "error=VALIDATION_ERROR message=Please enter the patient's full name (first, father and last name), not just part of the name -- real vendor message is confirmed to read '...full name (first, father and last name)...'; compare wording here"
+    },
+    {
+        "Area":  "patient_search",
+        "Title":  "Exact lookup by known patient_id",
+        "Tag":  "MOCK_ONLY",
+        "Method":  "GET",
+        "Path":  "/patients/P-90001",
+        "StatusCode":  404,
+        "Verdict":  "OBSERVED",
+        "Finding":  "full_name='' sex='' fields=error,message"
+    },
+    {
+        "Area":  "patient_search",
+        "Title":  "Unknown patient_id -> 404 PATIENT_NOT_FOUND",
+        "Tag":  "SPEC_UNVERIFIED",
+        "Method":  "GET",
+        "Path":  "",
+        "StatusCode":  404,
+        "Verdict":  "PASS",
+        "Finding":  "error=PATIENT_NOT_FOUND"
+    },
+    {
+        "Area":  "patient_search.matrix",
+        "Title":  "Exact full name match",
+        "Tag":  "MOCK_ONLY",
+        "Method":  "GET",
+        "Path":  "/patients?q=Ø¹ÙÙ Ø±Ø­Ø§Ù",
+        "StatusCode":  422,
+        "Verdict":  "OBSERVED",
+        "Finding":  "HTTP 422, 0 result(s) for 'Ø¹ÙÙ Ø±Ø­Ø§Ù'"
+    },
+    {
+        "Area":  "patient_search.matrix",
+        "Title":  "Reversed word order",
+        "Tag":  "MOCK_ONLY",
+        "Method":  "GET",
+        "Path":  "/patients?q=Ø±Ø­Ø§Ù Ø¹ÙÙ",
+        "StatusCode":  422,
+        "Verdict":  "OBSERVED",
+        "Finding":  "HTTP 422, 0 result(s) for 'Ø±Ø­Ø§Ù Ø¹ÙÙ'"
+    },
+    {
+        "Area":  "patient_search.matrix",
+        "Title":  "One-letter typo (Rahal -> Rajal)",
+        "Tag":  "MOCK_ONLY",
+        "Method":  "GET",
+        "Path":  "/patients?q=Ø¹ÙÙ Ø±Ø¬Ø§Ù",
+        "StatusCode":  422,
+        "Verdict":  "OBSERVED",
+        "Finding":  "HTTP 422, 0 result(s) for 'Ø¹ÙÙ Ø±Ø¬Ø§Ù'"
+    },
+    {
+        "Area":  "patient_search.matrix",
+        "Title":  "Shadda-diacritic variant vs plain spelling",
+        "Tag":  "MOCK_ONLY",
+        "Method":  "GET",
+        "Path":  "/patients?q=Ø¹ÙÙÙ Ø±Ø­Ø§Ù",
+        "StatusCode":  422,
+        "Verdict":  "OBSERVED",
+        "Finding":  "HTTP 422, 0 result(s) for 'Ø¹ÙÙÙ Ø±Ø­Ø§Ù'"
+    },
+    {
+        "Area":  "patient_search.matrix",
+        "Title":  "Padded with extra internal whitespace",
+        "Tag":  "MOCK_ONLY",
+        "Method":  "GET",
+        "Path":  "/patients?q=Ø¹ÙÙ  Ø±Ø­Ø§Ù",
+        "StatusCode":  422,
+        "Verdict":  "OBSERVED",
+        "Finding":  "HTTP 422, 0 result(s) for 'Ø¹ÙÙ  Ø±Ø­Ø§Ù'"
+    },
+    {
+        "Area":  "patient_search.matrix",
+        "Title":  "Definite-article (Al-) name, exact",
+        "Tag":  "MOCK_ONLY",
+        "Method":  "GET",
+        "Path":  "/patients?q=ÙØ­ÙØ¯ Ø§ÙØ­Ø§Ø¬",
+        "StatusCode":  422,
+        "Verdict":  "OBSERVED",
+        "Finding":  "HTTP 422, 0 result(s) for 'ÙØ­ÙØ¯ Ø§ÙØ­Ø§Ø¬'"
+    },
+    {
+        "Area":  "patient_search.matrix",
+        "Title":  "Definite-article name, article stripped",
+        "Tag":  "MOCK_ONLY",
+        "Method":  "GET",
+        "Path":  "/patients?q=ÙØ­ÙØ¯ Ø­Ø§Ø¬",
+        "StatusCode":  422,
+        "Verdict":  "OBSERVED",
+        "Finding":  "HTTP 422, 0 result(s) for 'ÙØ­ÙØ¯ Ø­Ø§Ø¬'"
+    },
+    {
+        "Area":  "patient_search.matrix",
+        "Title":  "3-word first+father+last pattern",
+        "Tag":  "SPEC_UNVERIFIED",
+        "Method":  "GET",
+        "Path":  "/patients?q=ÙØ­ÙØ¯ Ø­Ø³Ù Ø±Ø­Ø§Ù",
+        "StatusCode":  200,
+        "Verdict":  "OBSERVED",
+        "Finding":  "HTTP 200, 10 result(s) for 'ÙØ­ÙØ¯ Ø­Ø³Ù Ø±Ø­Ø§Ù' -> Ø­Ø³Ù ÙØ­ÙØ¯ Ø±Ø­Ø§Ù | Ø­Ø³Ù ÙØ­ÙØ¯ Ø±Ø­Ø§Ù | Ø­Ø³Ù ÙØ­ÙØ¯ Ø±Ø­Ø§Ù"
+    },
+    {
+        "Area":  "patient_search.matrix",
+        "Title":  "3-word kunya-compound given name",
+        "Tag":  "SPEC_UNVERIFIED",
+        "Method":  "GET",
+        "Path":  "/patients?q=Ø£Ø¨Ù Ø¨ÙØ± Ø®ÙÙÙ",
+        "StatusCode":  200,
+        "Verdict":  "OBSERVED",
+        "Finding":  "HTTP 200, 0 result(s) for 'Ø£Ø¨Ù Ø¨ÙØ± Ø®ÙÙÙ'"
+    },
+    {
+        "Area":  "patient_search.matrix",
+        "Title":  "3-word theophoric compound given name",
+        "Tag":  "SPEC_UNVERIFIED",
+        "Method":  "GET",
+        "Path":  "/patients?q=Ø¹Ø¨Ø¯ Ø§ÙØ±Ø­ÙÙ Ø§ÙÙÙÙÙ",
+        "StatusCode":  200,
+        "Verdict":  "OBSERVED",
+        "Finding":  "HTTP 200, 1 result(s) for 'Ø¹Ø¨Ø¯ Ø§ÙØ±Ø­ÙÙ Ø§ÙÙÙÙÙ' -> Ø¹Ø¨Ø¯Ø§ÙØ±Ø­ÙÙ Ø§ÙØ´ÙØ® Ø¹ÙÙ Ø§ÙÙÙÙÙ"
+    },
+    {
+        "Area":  "patient_search.matrix",
+        "Title":  "Duplicate full_name pair both returned, not deduped",
+        "Tag":  "SPEC_UNVERIFIED",
+        "Method":  "GET",
+        "Path":  "",
+        "StatusCode":  422,
+        "Verdict":  "OBSERVED",
+        "Finding":  "0 result(s) for 'Ø¹ÙÙ Ø­Ø±Ø¨' -- contract requires every match returned, never merged"
+    },
+    {
+        "Area":  "doctor_search",
+        "Title":  "List doctors, default (active_only=true)",
+        "Tag":  "MOCK_ONLY",
+        "Method":  "GET",
+        "Path":  "",
+        "StatusCode":  200,
+        "Verdict":  "PASS",
+        "Finding":  "total=322"
+    },
+    {
+        "Area":  "doctor_search",
+        "Title":  "Partial (single word) Arabic search for doctor 'Ø¹ÙÙ Ø±Ø­Ø§Ù'",
+        "Tag":  "MOCK_ONLY",
+        "Method":  "GET",
+        "Path":  "",
+        "StatusCode":  200,
+        "Verdict":  "PASS",
+        "Finding":  "q='Ø¹ÙÙ' -> 10 result(s) (doctors/workers are documented to accept partial q, unlike patients)"
+    },
+    {
+        "Area":  "doctor_search",
+        "Title":  "Partial (single word) Arabic search for doctor 'Ø­Ø³Ù Ø²Ø¹ÙØªØ±'",
+        "Tag":  "MOCK_ONLY",
+        "Method":  "GET",
+        "Path":  "",
+        "StatusCode":  200,
+        "Verdict":  "PASS",
+        "Finding":  "q='Ø­Ø³Ù' -> 10 result(s) (doctors/workers are documented to accept partial q, unlike patients)"
+    },
+    {
+        "Area":  "doctor_search",
+        "Title":  "Partial (single word) Arabic search for doctor 'ÙØ§Ø·ÙØ© ÙØ§Ø³Ù'",
+        "Tag":  "MOCK_ONLY",
+        "Method":  "GET",
+        "Path":  "",
+        "StatusCode":  200,
+        "Verdict":  "PASS",
+        "Finding":  "q='ÙØ§Ø·ÙØ©' -> 3 result(s) (doctors/workers are documented to accept partial q, unlike patients)"
+    },
+    {
+        "Area":  "doctor_search",
+        "Title":  "Partial (single word) Arabic search for doctor 'Ø®Ø§ÙØ¯ Ø¹ÙØªØ§ÙÙ'",
+        "Tag":  "MOCK_ONLY",
+        "Method":  "GET",
+        "Path":  "",
+        "StatusCode":  200,
+        "Verdict":  "PASS",
+        "Finding":  "q='Ø®Ø§ÙØ¯' -> 1 result(s) (doctors/workers are documented to accept partial q, unlike patients)"
+    },
+    {
+        "Area":  "doctor_search",
+        "Title":  "Partial (single word) Arabic search for doctor 'Ø¹Ø§Ø¦Ø´Ø© Ø§ÙÙÙØ³ÙÙ'",
+        "Tag":  "MOCK_ONLY",
+        "Method":  "GET",
+        "Path":  "",
+        "StatusCode":  200,
+        "Verdict":  "OBSERVED",
+        "Finding":  "q='Ø¹Ø§Ø¦Ø´Ø©' -> 0 result(s) (doctors/workers are documented to accept partial q, unlike patients)"
+    },
+    {
+        "Area":  "doctor_search",
+        "Title":  "Unknown doctor_id -> 404 DOCTOR_NOT_FOUND",
+        "Tag":  "SPEC_UNVERIFIED",
+        "Method":  "GET",
+        "Path":  "",
+        "StatusCode":  404,
+        "Verdict":  "PASS",
+        "Finding":  "error=DOCTOR_NOT_FOUND"
+    },
+    {
+        "Area":  "worker_search",
+        "Title":  "Does worker q= actually filter? (q vs no-q total comparison)",
+        "Tag":  "KNOWN_REAL_BUG",
+        "Method":  "GET",
+        "Path":  "",
+        "StatusCode":  null,
+        "Verdict":  "OBSERVED",
+        "Finding":  "q='Ø¨ÙØ§Ù' total=1668; no-q total=1668; SAME=True -- CONFIRMED on the real server that q is silently ignored (identical totals); the mock currently DOES filter on q, which is itself a mock/real divergence worth closing"
+    },
+    {
+        "Area":  "worker_search",
+        "Title":  "Partial Arabic search for worker 'Ø¨ÙØ§Ù ÙÙÙÙ'",
+        "Tag":  "MOCK_ONLY",
+        "Method":  "GET",
+        "Path":  "",
+        "StatusCode":  200,
+        "Verdict":  "OBSERVED",
+        "Finding":  "q='Ø¨ÙØ§Ù' -> 10 result(s)"
+    },
+    {
+        "Area":  "worker_search",
+        "Title":  "Partial Arabic search for worker 'Ø±ÙØ§ Ø­ÙØ§Ø¯Ø©'",
+        "Tag":  "MOCK_ONLY",
+        "Method":  "GET",
+        "Path":  "",
+        "StatusCode":  200,
+        "Verdict":  "OBSERVED",
+        "Finding":  "q='Ø±ÙØ§' -> 10 result(s)"
+    },
+    {
+        "Area":  "worker_search",
+        "Title":  "Partial Arabic search for worker 'ÙØµØ·ÙÙ Ø¨ÙØ¶ÙÙ'",
+        "Tag":  "MOCK_ONLY",
+        "Method":  "GET",
+        "Path":  "",
+        "StatusCode":  200,
+        "Verdict":  "OBSERVED",
+        "Finding":  "q='ÙØµØ·ÙÙ' -> 10 result(s)"
+    },
+    {
+        "Area":  "worker_search",
+        "Title":  "Partial Arabic search for worker 'Ø³ÙØ§Ø¡ Ø¹Ø³ÙØ±Ø§Ù'",
+        "Tag":  "MOCK_ONLY",
+        "Method":  "GET",
+        "Path":  "",
+        "StatusCode":  200,
+        "Verdict":  "OBSERVED",
+        "Finding":  "q='Ø³ÙØ§Ø¡' -> 10 result(s)"
+    },
+    {
+        "Area":  "worker_search",
+        "Title":  "Partial Arabic search for worker 'ÙÙØ± Ø¬Ø§Ø¨Ø±'",
+        "Tag":  "MOCK_ONLY",
+        "Method":  "GET",
+        "Path":  "",
+        "StatusCode":  200,
+        "Verdict":  "OBSERVED",
+        "Finding":  "q='ÙÙØ±' -> 10 result(s)"
+    },
+    {
+        "Area":  "worker_search",
+        "Title":  "Unknown employee_id -> 404 WORKER_NOT_FOUND",
+        "Tag":  "SPEC_UNVERIFIED",
+        "Method":  "GET",
+        "Path":  "",
+        "StatusCode":  404,
+        "Verdict":  "PASS",
+        "Finding":  "error=WORKER_NOT_FOUND"
+    },
+    {
+        "Area":  "pagination",
+        "Title":  "limit=0",
+        "Tag":  "SPEC_UNVERIFIED",
+        "Method":  "GET",
+        "Path":  "",
+        "StatusCode":  422,
+        "Verdict":  "PASS",
+        "Finding":  "expected 422=True, got status=422"
+    },
+    {
+        "Area":  "pagination",
+        "Title":  "limit=1",
+        "Tag":  "SPEC_UNVERIFIED",
+        "Method":  "GET",
+        "Path":  "",
+        "StatusCode":  200,
+        "Verdict":  "PASS",
+        "Finding":  "expected 422=False, got status=200"
+    },
+    {
+        "Area":  "pagination",
+        "Title":  "limit=500",
+        "Tag":  "SPEC_UNVERIFIED",
+        "Method":  "GET",
+        "Path":  "",
+        "StatusCode":  200,
+        "Verdict":  "PASS",
+        "Finding":  "expected 422=False, got status=200"
+    },
+    {
+        "Area":  "pagination",
+        "Title":  "limit=501",
+        "Tag":  "SPEC_UNVERIFIED",
+        "Method":  "GET",
+        "Path":  "",
+        "StatusCode":  422,
+        "Verdict":  "PASS",
+        "Finding":  "expected 422=True, got status=422"
+    },
+    {
+        "Area":  "pagination",
+        "Title":  "limit=9999",
+        "Tag":  "SPEC_UNVERIFIED",
+        "Method":  "GET",
+        "Path":  "",
+        "StatusCode":  422,
+        "Verdict":  "PASS",
+        "Finding":  "expected 422=True, got status=422"
+    },
+    {
+        "Area":  "pagination",
+        "Title":  "offset=-1",
+        "Tag":  "SPEC_UNVERIFIED",
+        "Method":  "GET",
+        "Path":  "",
+        "StatusCode":  422,
+        "Verdict":  "PASS",
+        "Finding":  "status=422"
+    },
+    {
+        "Area":  "pagination",
+        "Title":  "offset=0",
+        "Tag":  "SPEC_UNVERIFIED",
+        "Method":  "GET",
+        "Path":  "",
+        "StatusCode":  200,
+        "Verdict":  "PASS",
+        "Finding":  "status=200"
+    },
+    {
+        "Area":  "errors",
+        "Title":  "POST /patients -> 405 METHOD_NOT_ALLOWED",
+        "Tag":  "SPEC_UNVERIFIED",
+        "Method":  "GET",
+        "Path":  "",
+        "StatusCode":  500,
+        "Verdict":  "FAIL",
+        "Finding":  "status=500 error=SERVER_ERROR"
+    },
+    {
+        "Area":  "errors",
+        "Title":  "POST /doctors -> 405 METHOD_NOT_ALLOWED",
+        "Tag":  "SPEC_UNVERIFIED",
+        "Method":  "GET",
+        "Path":  "",
+        "StatusCode":  500,
+        "Verdict":  "FAIL",
+        "Finding":  "status=500 error=SERVER_ERROR"
+    },
+    {
+        "Area":  "errors",
+        "Title":  "POST /workers -> 405 METHOD_NOT_ALLOWED",
+        "Tag":  "SPEC_UNVERIFIED",
+        "Method":  "GET",
+        "Path":  "",
+        "StatusCode":  500,
+        "Verdict":  "FAIL",
+        "Finding":  "status=500 error=SERVER_ERROR"
+    },
+    {
+        "Area":  "errors",
+        "Title":  "POST /health -> 405 METHOD_NOT_ALLOWED",
+        "Tag":  "SPEC_UNVERIFIED",
+        "Method":  "GET",
+        "Path":  "",
+        "StatusCode":  500,
+        "Verdict":  "FAIL",
+        "Finding":  "status=500 error=SERVER_ERROR"
+    },
+    {
+        "Area":  "encoding",
+        "Title":  "Content-Type is application/json; charset=utf-8",
+        "Tag":  "SPEC_UNVERIFIED",
+        "Method":  "GET",
+        "Path":  "",
+        "StatusCode":  null,
+        "Verdict":  "FAIL",
+        "Finding":  "Content-Type='application/json'"
+    },
+    {
+        "Area":  "encoding",
+        "Title":  "Byte-exact round-trip of stored Arabic full_name",
+        "Tag":  "MOCK_ONLY",
+        "Method":  "GET",
+        "Path":  "",
+        "StatusCode":  null,
+        "Verdict":  "OBSERVED",
+        "Finding":  "expected='Ø¹ÙÙ Ø±Ø­Ø§Ù' actual='' exact-match=False"
+    },
+    {
+        "Area":  "sex_values",
+        "Title":  "Shape of the 'sex' field on a known record",
+        "Tag":  "OPEN_QUESTION",
+        "Method":  "GET",
+        "Path":  "",
+        "StatusCode":  null,
+        "Verdict":  "OBSERVED",
+        "Finding":  "sex='' (length 0) -- CONFIRMED real-server data uses a full Arabic word (e.g. the word for 'male'), not a 1-char M/F code; the mock's Patient.sex column is String(1), which cannot even store that shape"
+    },
+    {
+        "Area":  "patient_search",
+        "Title":  "Known-real full name smoke test ('ÙØ­ÙØ¯ Ø¹Ø¨Ø§Ø³ ÙÙØµÙØ±')",
+        "Tag":  "KNOWN_REAL_BUG",
+        "Method":  "GET",
+        "Path":  "",
+        "StatusCode":  null,
+        "Verdict":  "OBSERVED",
+        "Finding":  "HTTP 200, total=22 -- confirmed to match 22 real patients in an earlier real-server run; 0 results here means either the mock (expected, no such fixture) or a real-server regression"
+    }
+]

@@ -1,0 +1,323 @@
+Source: C:\Users\it\Desktop\API Result.txt (verbatim, copied 2026-08-25)
+Captured by: Dr.Hussein.Hazemi, from a machine with real network access to the
+             hospital's internal network (test_hospital_directory_api_3.ps1).
+Target: http://malin:8080/his-general/api/directory/v1 (the REAL vendor server,
+        not the mock).
+Why this file exists: this is the raw, unedited console output of that run —
+        every fact pulled from it below is a direct quote of a real HTTP
+        response, not a paraphrase or inference.
+
+================================================================================
+
+PS C:\Users\Dr.Hussein.Hazemi\Desktop> powershell -ExecutionPolicy Bypass -File test_hospital_directory_api_3.ps1
+Hospital Directory API - Full Endpoint Test (v4)
+Target: http://malin:8080/his-general/api/directory/v1
+Using API key: dev-secret-key
+
+======================================================================
+ 1. GET /health  (no key)
+======================================================================
+  HTTP 200
+{
+    "status":  "healthy",
+    "service":  "his-general-directory",
+    "api_version":  "1.0.0",
+    "timestamp":  "2026-08-17T12:11:57.314Z"
+}
+
+======================================================================
+ 2. GET /patients?q=...  (trying candidate full names automatically)
+======================================================================
+
+  Trying: عباس منصور الحسن
+    -> HTTP 200, 0 result(s)
+
+  Trying: عباس منصور العتيبي
+    -> HTTP 200, 0 result(s)
+
+  Trying: منصور عباس الحسن
+    -> HTTP 200, 0 result(s)
+
+  Trying: محمد عباس منصور
+    -> HTTP 200, 5 result(s)
+
+  MATCH FOUND on 'محمد عباس منصور':
+{
+    "success":  true,
+    "items":  [
+                  {
+                      "patient_id":  "5690.47148",
+                      "full_name":  "Ø¹Ø¨Ø§Ø³ Ù\u0085Ø­Ù\u0085Ø¯ Ù\u0085ÙØµÙØ±",
+                      "first_name":  "Ø¹Ø¨Ø§Ø³",
+                      "last_name":  "Ù\u0085ÙØµÙØ±",
+                      "birth_date":  "1981-01-01",
+                      "age":  45,
+                      "sex":  "Ø°ÙØ±"
+                  },
+                  {
+                      "patient_id":  "5690.17735",
+                      "full_name":  "Ø¹Ø¨Ø§Ø³ Ù\u0085Ø­Ù\u0085Ø¯ Ù\u0085ÙØµÙØ±",
+                      "first_name":  "Ø¹Ø¨Ø§Ø³",
+                      "last_name":  "Ù\u0085ÙØµÙØ±",
+                      "birth_date":  "1993-01-01",
+                      "age":  33,
+                      "sex":  "Ø°ÙØ±"
+                  },
+                  {
+                      "patient_id":  "5690.663231",
+                      "full_name":  "Ø¹Ø¨Ø§Ø³ Ù\u0085Ø­Ù\u0085Ø¯ Ù\u0085ÙØµÙØ±",
+                      "first_name":  "Ø¹Ø¨Ø§Ø³",
+                      "last_name":  "Ù\u0085ÙØµÙØ±",
+                      "birth_date":  "1978-04-30",
+                      "age":  48,
+                      "sex":  "Ø°ÙØ±"
+                  },
+                  {
+                      "patient_id":  "5690.478674",
+                      "full_name":  "Ø¹Ø¨Ø§Ø³ Ù\u0085Ø­Ù\u0085Ø¯ Ù\u0085ÙØµÙØ±",
+                      "first_name":  "Abbas",
+                      "last_name":  "Mansour",
+                      "birth_date":  "2021-01-01",
+                      "age":  5,
+                      "sex":  "Ø°ÙØ±"
+                  },
+                  {
+                      "patient_id":  "5690.165325",
+                      "full_name":  "Ø¹Ø¨Ø§Ø³ Ù\u0085Ø­Ù\u0085Ø¯ Ù\u0085ÙØµÙØ±",
+                      "first_name":  "Ø¹Ø¨Ø§Ø³",
+                      "last_name":  "Ù\u0085ÙØµÙØ±",
+                      "birth_date":  "2001-01-01",
+                      "age":  25,
+                      "sex":  "Ø°ÙØ±"
+                  }
+              ],
+    "total":  22,
+    "limit":  5,
+    "offset":  0
+}
+  ENCODING WARNING (patient search item): 'full_name' looks corrupted (mojibake): Ø¹Ø¨Ø§Ø³ ÙØ­ÙØ¯ ÙÙØµÙØ±
+  ENCODING WARNING (patient search item): 'first_name' looks corrupted (mojibake): Ø¹Ø¨Ø§Ø³
+  ENCODING WARNING (patient search item): 'last_name' looks corrupted (mojibake): ÙÙØµÙØ±
+  Field check (patient search item): MATCHES our contract exactly.
+
+======================================================================
+ 3. GET /patients/5690.47148
+======================================================================
+  HTTP 200
+{
+    "patient_id":  "5690.47148",
+    "full_name":  "Ø¹Ø¨Ø§Ø³ Ù\u0085Ø­Ù\u0085Ø¯ Ù\u0085ÙØµÙØ±",
+    "first_name":  "Ø¹Ø¨Ø§Ø³",
+    "last_name":  "Ù\u0085ÙØµÙØ±",
+    "birth_date":  "1981-01-01",
+    "age":  45,
+    "sex":  "Ø°ÙØ±"
+}
+  ENCODING WARNING (patient exact lookup): 'full_name' looks corrupted (mojibake): Ø¹Ø¨Ø§Ø³ ÙØ­ÙØ¯ ÙÙØµÙØ±
+  ENCODING WARNING (patient exact lookup): 'first_name' looks corrupted (mojibake): Ø¹Ø¨Ø§Ø³
+  ENCODING WARNING (patient exact lookup): 'last_name' looks corrupted (mojibake): ÙÙØµÙØ±
+  Field check (patient exact lookup): MATCHES our contract exactly.
+
+======================================================================
+ 4. GET /doctors?limit=5
+======================================================================
+  HTTP 200
+{
+    "success":  true,
+    "items":  [
+                  {
+                      "doctor_id":  "8528.69",
+                      "full_name":  "Ø§Ø¨Ø±Ø§ÙÙÙ\u0085 Ø§Ø­Ù\u0085Ø¯ Ø¹Ø¨Ø§Ø¯Ù",
+                      "specialty_id":  "A2",
+                      "specialty_name":  "Ù\u0085Ø®ØªØ¨Ø±",
+                      "department_id":  null,
+                      "department_name":  null,
+                      "is_active":  true
+                  },
+                  {
+                      "doctor_id":  "5690.466",
+                      "full_name":  "Ø§Ø¨Ø±Ø§ÙÙÙ\u0085 ØºØ§Ø²Ù Ø´Ø±Ù Ø§ÙØ¯ÙÙ",
+                      "specialty_id":  "25",
+                      "specialty_name":  "ØªØ®Ø¯ÙØ± ÙØ§ÙØ¹Ø§Ø´",
+                      "department_id":  null,
+                      "department_name":  null,
+                      "is_active":  true
+                  },
+                  {
+                      "doctor_id":  "8528.161",
+                      "full_name":  "Ø§Ø­Ø³Ø§Ù Ù\u0085Ø­Ù\u0085Ø¯ Ø¹Ø¨Ø§Ø³",
+                      "specialty_id":  "16",
+                      "specialty_name":  "Ø§Ù\u0085Ø±Ø§Ø¶ Ø¬ÙØ¯ÙØ©",
+                      "department_id":  null,
+                      "department_name":  null,
+                      "is_active":  true
+                  },
+                  {
+                      "doctor_id":  "8528.231",
+                      "full_name":  "Ø§Ø­Ù\u0085Ø¯ Ø­Ø³ÙÙ Ø¨ØµÙ",
+                      "specialty_id":  "03",
+                      "specialty_name":  "Ø¬Ø±Ø§Ø­Ø© Ø¹Ø§Ù\u0085Ø©",
+                      "department_id":  null,
+                      "department_name":  null,
+                      "is_active":  true
+                  },
+                  {
+                      "doctor_id":  "5690.607",
+                      "full_name":  "Ø§Ø­Ù\u0085Ø¯ Ø­Ø³Ù ÙØ­Ù",
+                      "specialty_id":  "03",
+                      "specialty_name":  "Ø¬Ø±Ø§Ø­Ø© Ø¹Ø§Ù\u0085Ø©",
+                      "department_id":  null,
+                      "department_name":  null,
+                      "is_active":  true
+                  }
+              ],
+    "total":  321,
+    "limit":  5,
+    "offset":  0
+}
+  ENCODING WARNING (doctor search item): 'full_name' looks corrupted (mojibake): Ø§Ø¨Ø±Ø§ÙÙÙ Ø§Ø­ÙØ¯ Ø¹Ø¨Ø§Ø¯Ù
+  ENCODING WARNING (doctor search item): 'full_name' looks corrupted (mojibake): Ø§Ø¨Ø±Ø§ÙÙÙ ØºØ§Ø²Ù Ø´Ø±Ù Ø§ÙØ¯ÙÙ
+  ENCODING WARNING (doctor search item): 'full_name' looks corrupted (mojibake): Ø§Ø­Ø³Ø§Ù ÙØ­ÙØ¯ Ø¹Ø¨Ø§Ø³
+  ENCODING WARNING (doctor search item): 'full_name' looks corrupted (mojibake): Ø§Ø­ÙØ¯ Ø­Ø³ÙÙ Ø¨ØµÙ
+  ENCODING WARNING (doctor search item): 'full_name' looks corrupted (mojibake): Ø§Ø­ÙØ¯ Ø­Ø³Ù ÙØ­Ù
+  Field check (doctor search item): MATCHES our contract exactly.
+
+======================================================================
+ 5. GET /doctors/8528.69
+======================================================================
+  HTTP 200
+{
+    "doctor_id":  "8528.69",
+    "full_name":  "Ø§Ø¨Ø±Ø§ÙÙÙ\u0085 Ø§Ø­Ù\u0085Ø¯ Ø¹Ø¨Ø§Ø¯Ù",
+    "specialty_id":  "A2",
+    "specialty_name":  "Ù\u0085Ø®ØªØ¨Ø±",
+    "department_id":  null,
+    "department_name":  null,
+    "is_active":  true
+}
+  ENCODING WARNING (doctor exact lookup): 'full_name' looks corrupted (mojibake): Ø§Ø¨Ø±Ø§ÙÙÙ Ø§Ø­ÙØ¯ Ø¹Ø¨Ø§Ø¯Ù
+  Field check (doctor exact lookup): MATCHES our contract exactly.
+
+======================================================================
+ 6. GET /workers?limit=5
+======================================================================
+  HTTP 200
+{
+    "success":  true,
+    "items":  [
+                  {
+                      "employee_id":  "8528.1309",
+                      "full_name":  "Ø¹ÙÙ Ø­Ø³ÙÙ ÙØªÙÙÙ",
+                      "job_id":  null,
+                      "job_title":  null,
+                      "department_id":  null,
+                      "department_name":  null,
+                      "section_id":  null,
+                      "administration_id":  null,
+                      "is_manager":  null,
+                      "is_active":  true
+                  },
+                  {
+                      "employee_id":  "5690.121",
+                      "full_name":  "Ø§Ø³Ø±Ø§Ø¡ Ø¨Ø§Ø³Ù\u0085 Ø§ÙØ¶ÙÙØ©",
+                      "job_id":  null,
+                      "job_title":  null,
+                      "department_id":  "5690.55",
+                      "department_name":  "Ø§ÙØ±Ø§Ø¨Ø¹ Ø¬Ø¯ÙØ¯",
+                      "section_id":  null,
+                      "administration_id":  null,
+                      "is_manager":  null,
+                      "is_active":  true
+                  },
+                  {
+                      "employee_id":  "5690.13",
+                      "full_name":  "Ø²ÙØ±Ø© ÙÙ\u0085Ø± ÙÙ\u0085Ø§Ù Ø§ÙØ¯ÙÙ",
+                      "job_id":  null,
+                      "job_title":  null,
+                      "department_id":  null,
+                      "department_name":  null,
+                      "section_id":  null,
+                      "administration_id":  null,
+                      "is_manager":  null,
+                      "is_active":  true
+                  },
+                  {
+                      "employee_id":  "5690.133",
+                      "full_name":  "Ø§Ø­Ù\u0085Ø¯ Ø¹Ø¨Ø§Ø³ Ø­Ø§Ø±ÙØµÙ",
+                      "job_id":  null,
+                      "job_title":  null,
+                      "department_id":  null,
+                      "department_name":  null,
+                      "section_id":  null,
+                      "administration_id":  null,
+                      "is_manager":  null,
+                      "is_active":  true
+                  },
+                  {
+                      "employee_id":  "5690.149",
+                      "full_name":  "Ø±ÙØ§Ù Ø­Ù\u0085Ø²Ø© Ø±Ø³ÙØ§Ù",
+                      "job_id":  null,
+                      "job_title":  null,
+                      "department_id":  null,
+                      "department_name":  null,
+                      "section_id":  null,
+                      "administration_id":  null,
+                      "is_manager":  null,
+                      "is_active":  true
+                  }
+              ],
+    "total":  1667,
+    "limit":  5,
+    "offset":  0
+}
+  ENCODING WARNING (worker list item): 'full_name' looks corrupted (mojibake): Ø¹ÙÙ Ø­Ø³ÙÙ ÙØªÙÙÙ
+  ENCODING WARNING (worker list item): 'full_name' looks corrupted (mojibake): Ø§Ø³Ø±Ø§Ø¡ Ø¨Ø§Ø³Ù Ø§ÙØ¶ÙÙØ©
+  ENCODING WARNING (worker list item): 'full_name' looks corrupted (mojibake): Ø²ÙØ±Ø© ÙÙØ± ÙÙØ§Ù Ø§ÙØ¯ÙÙ
+  ENCODING WARNING (worker list item): 'full_name' looks corrupted (mojibake): Ø§Ø­ÙØ¯ Ø¹Ø¨Ø§Ø³ Ø­Ø§Ø±ÙØµÙ
+  ENCODING WARNING (worker list item): 'full_name' looks corrupted (mojibake): Ø±ÙØ§Ù Ø­ÙØ²Ø© Ø±Ø³ÙØ§Ù
+  Field check (worker list item): EXTRA/unexpected field(s): department_name
+
+======================================================================
+ 7. GET /workers/8528.1309
+======================================================================
+  HTTP 200
+{
+    "employee_id":  "8528.1309",
+    "full_name":  "Ø¹ÙÙ Ø­Ø³ÙÙ ÙØªÙÙÙ",
+    "job_id":  null,
+    "job_title":  null,
+    "department_id":  null,
+    "department_name":  null,
+    "section_id":  null,
+    "administration_id":  null,
+    "is_manager":  null,
+    "is_active":  true
+}
+  ENCODING WARNING (worker exact lookup): 'full_name' looks corrupted (mojibake): Ø¹ÙÙ Ø­Ø³ÙÙ ÙØªÙÙÙ
+  Field check (worker exact lookup): EXTRA/unexpected field(s): department_name
+
+======================================================================
+ 8. GET /doctors with NO key  (expect 401)
+======================================================================
+  HTTP 401  (expected 401)
+{
+    "error":  "UNAUTHORIZED",
+    "message":  "Missing or invalid API key"
+}
+
+======================================================================
+ SUMMARY
+======================================================================
+
+Endpoint              Status   Ok
+--------              ------   --
+GET /health              200 True
+GET /patients?q=...      200 True
+GET /patients/{id}       200 True
+GET /doctors             200 True
+GET /doctors/{id}        200 True
+GET /workers             200 True
+GET /workers/{id}        200 True
+GET /doctors (no key)    401 True
+
+PS C:\Users\Dr.Hussein.Hazemi\Desktop>

@@ -6,8 +6,10 @@ from app.models.patient import Patient
 
 def search_patients(
     db: Session,
-    q: str | None,
     patient_id: str | None,
+    first_name: str | None,
+    father_name: str | None,
+    last_name: str | None,
     limit: int,
     offset: int,
 ) -> tuple[list[Patient], int]:
@@ -15,18 +17,20 @@ def search_patients(
 
     if patient_id:
         stmt = stmt.where(Patient.patient_id == patient_id)
-    if q:
-        like = f"%{q}%"
-        stmt = stmt.where(
-            or_(
-                Patient.patient_id.ilike(like),
-                Patient.full_name.ilike(like),
-            )
-        )
+
+    if first_name:
+        like = f"%{first_name}%"
+        stmt = stmt.where(or_(Patient.first_name_ar.ilike(like), Patient.first_name_en.ilike(like)))
+    if father_name:
+        like = f"%{father_name}%"
+        stmt = stmt.where(or_(Patient.father_name_ar.ilike(like), Patient.father_name_en.ilike(like)))
+    if last_name:
+        like = f"%{last_name}%"
+        stmt = stmt.where(or_(Patient.last_name_ar.ilike(like), Patient.last_name_en.ilike(like)))
 
     total = db.scalar(select(func.count()).select_from(stmt.subquery())) or 0
 
-    stmt = stmt.order_by(Patient.patient_id).limit(limit).offset(offset)
+    stmt = stmt.order_by(Patient.first_name_ar, Patient.last_name_ar).limit(limit).offset(offset)
     items = list(db.execute(stmt).scalars().all())
 
     return items, total

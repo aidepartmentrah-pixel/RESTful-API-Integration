@@ -4,35 +4,35 @@ from app.core.errors import ApiError
 from app.models.patient import Patient
 from app.repositories import patient_repository
 
+# OpenAPI v1.1: search must be patient_id, or all three of first_name/
+# father_name/last_name together. Any other combination (a lone name field,
+# or first+last without father) is rejected with this exact message.
+_MISSING_CRITERIA_MESSAGE = (
+    "Provide 'patient_id', or all three of 'first_name', 'father_name' and 'last_name'"
+)
+
 
 def search_patients(
     db: Session,
-    q: str | None,
     patient_id: str | None,
+    first_name: str | None,
+    father_name: str | None,
+    last_name: str | None,
     limit: int,
     offset: int,
 ) -> tuple[list[Patient], int]:
-    if not any([q, patient_id]):
+    has_full_name_trio = bool(first_name and father_name and last_name)
+
+    if not patient_id and not has_full_name_trio:
         raise ApiError(
             status_code=422,
             error="VALIDATION_ERROR",
-            message="At least one of 'q' or 'patient_id' is required",
+            message=_MISSING_CRITERIA_MESSAGE,
         )
 
-    # The real vendor API rejects a name search that isn't a complete name
-    # (confirmed: a single word gets a 422). Our Patient model only stores
-    # first+last (no father/middle name), so we can't reproduce the vendor's
-    # exact 3-word rule -- this enforces the same class of validation (a
-    # bare word isn't a name search) using the 2-word minimum our own data
-    # actually supports.
-    if q and len(q.split()) < 2:
-        raise ApiError(
-            status_code=422,
-            error="VALIDATION_ERROR",
-            message="Please enter the patient's full name, not just part of the name",
-        )
-
-    return patient_repository.search_patients(db, q, patient_id, limit, offset)
+    return patient_repository.search_patients(
+        db, patient_id, first_name, father_name, last_name, limit, offset
+    )
 
 
 def get_patient(db: Session, patient_id: str) -> Patient:

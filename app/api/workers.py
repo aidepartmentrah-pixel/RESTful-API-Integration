@@ -1,6 +1,4 @@
-from typing import Annotated
-
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends
 
 from app.api.deps import DbSession, LimitParam, OffsetParam
 from app.core.security import require_api_key
@@ -15,14 +13,12 @@ router = APIRouter(
 
 
 @router.get("", response_model=WorkerListResponse)
-def search_workers(
+def list_workers(
     db: DbSession,
-    q: Annotated[str | None, Query(min_length=1)] = None,
-    active_only: Annotated[bool, Query()] = True,
-    limit: LimitParam = 100,
+    limit: LimitParam = 10,
     offset: OffsetParam = 0,
 ) -> WorkerListResponse:
-    items, total = worker_service.search_workers(db, q, active_only, limit, offset)
+    items, total = worker_service.list_workers(db, limit, offset)
     return WorkerListResponse(
         items=[Worker.model_validate(item) for item in items],
         total=total,
@@ -34,4 +30,6 @@ def search_workers(
 @router.get("/{employee_id}", response_model=Worker)
 def get_worker(db: DbSession, employee_id: str) -> Worker:
     worker = worker_service.get_worker(db, employee_id)
-    return Worker.model_validate(worker)
+    # OpenAPI v1.1 quirk: HR's single-employee lookup exposes no active flag,
+    # so is_active is always reported true via this route specifically.
+    return Worker.model_validate(worker).model_copy(update={"is_active": True})

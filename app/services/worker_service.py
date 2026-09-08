@@ -5,10 +5,8 @@ from app.models.worker import Worker
 from app.repositories import worker_repository
 
 
-def search_workers(
-    db: Session, q: str | None, active_only: bool, limit: int, offset: int
-) -> tuple[list[Worker], int]:
-    return worker_repository.search_workers(db, q, active_only, limit, offset)
+def list_workers(db: Session, limit: int, offset: int) -> tuple[list[Worker], int]:
+    return worker_repository.list_workers(db, limit, offset)
 
 
 def get_worker(db: Session, employee_id: str) -> Worker:

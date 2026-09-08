@@ -1,8 +1,8 @@
 # Hospital Directory Read API — Implementation Requirements
 
 **Prepared for:** External data company implementing the production API
-**Status:** Approved baseline — resolves the review round on the Patient resource and Health response
-**Companion file:** `Hospital_Directory_API_OpenAPI.yaml` (machine-readable contract — authoritative on conflicts, see section 9)
+**Status:** Superseded on patient search, ID format, worker search, and error codes by OpenAPI v1.1 (received from the vendor 2026-09-08) — this document has been updated to match; see section 9
+**Companion file:** `Hospital_Directory_API_OpenAPI_v1.1.yaml` (machine-readable contract — authoritative on conflicts, see section 9)
 **Reference implementation:** A working mock API implementing this exact contract is available for the vendor to test against during development (FastAPI + PostgreSQL, source data fictional).
 
 ---
@@ -69,13 +69,17 @@ strings `"Y"`/`"N"`/`"1"`/`"0"`.
 
 | Field | Type | Required | Nullable | Notes |
 |---|---|---|---|---|
-| `patient_id` | string | Yes | No | Permanent, stable identifier for the person. |
-| `full_name` | string | Yes | No | Display name; must support Arabic and English without corruption. |
-| `first_name` | string | No | Yes | |
-| `last_name` | string | No | Yes | |
+| `patient_id` | string | Yes | No | Permanent, stable identifier for the person. Plain numeric string — no `P-` prefix, no trailing `.0`. |
+| `full_name` | string | Yes | No | Arabic first+father+last joined with single spaces (blank parts skipped); `null` only if all three are blank. |
+| `first_name` | string | No | Yes | English first name when stored, otherwise Arabic. |
+| `last_name` | string | No | Yes | English last name when stored, otherwise Arabic. |
 | `birth_date` | date | No | Yes | Preferred source for accurate age. |
 | `age` | integer | No | Yes | May be supplied directly, or derived from `birth_date` — confirm which the source system provides. |
-| `sex` | string | No | Yes | Allowed values to be confirmed by the source-system owner (see the open items list, section 9). |
+| `sex` | string | No | Yes | Gender code resolved to a display name via the codes service; not a fixed enum. Falls back to the raw stored code if unresolvable. |
+
+`father_name` exists as a **search-only** input (section 3.1) — it is never
+returned in the response body. There is no dedicated `father_name` field on
+the Patient resource.
 
 Patients are modeled as a **person**, not a visit. `visit_id`,
 `phone_number`, `medical_file_number`, `document_number`, `arrival_time`, and
@@ -140,29 +144,37 @@ contract HCAT/HCopilot depend on. The reference mock returns `status` only.
 
 | Parameter | Required | Description |
 |---|---|---|
-| `q` | Conditional | General search text — name or ID. |
 | `patient_id` | Conditional | Exact patient identifier filter. |
+| `first_name` | Conditional | Substring match against the first-name column (Arabic or English variant). |
+| `father_name` | Conditional | Substring match against the father-name column (Arabic or English variant). Filter-only — never returned in the response. |
+| `last_name` | Conditional | Substring match against the last-name column (Arabic or English variant). |
 | `limit` | No | Default 100, min 1, max 500. |
 | `offset` | No | Default 0, min 0. |
 
-**At least one** of `q`, `patient_id` is required. A request with neither
-returns `422` (`VALIDATION_ERROR`) — patient enumeration without any
-criterion is not supported.
+A search must be one of exactly two shapes: **(a)** `patient_id` alone
+(exact numeric match), or **(b)** all three of `first_name`, `father_name`,
+and `last_name` together. Any other combination — a lone name field, or
+first+last without father — is rejected with `422` (`VALIDATION_ERROR`),
+message: *"Provide 'patient_id', or all three of 'first_name',
+'father_name' and 'last_name'"*. Supplying `patient_id` together with the
+full name trio ANDs them. Patient enumeration with no criterion at all is
+not supported.
 
-`q` should match against whatever of these the source system can search:
-patient ID, full name.
+Name matching: each field is matched case-insensitively as a **substring**
+against **only its own column** (never cross-matched), against either the
+Arabic or English variant of that column. The three conditions are AND-ed.
+Results are ordered by Arabic first name, then Arabic last name.
 
-**Confirmed against the real vendor server**: unlike doctors/workers, a
-partial name in `q` is *not* accepted for a fuzzy match — a single-word `q`
-returns `422` (`VALIDATION_ERROR`), message *"Please enter the patient's
-full name (first, father and last name), not just part of the name"*. Only
-a complete name is accepted. This mock enforces the same class of
-validation (reject a bare single word) using a 2-word minimum rather than
-the vendor's literal 3-word rule, since this mock's `Patient` model only
-stores first+last name (no father/middle name field) — see
-`app/services/patient_service.py`. Consuming applications must not fire a
-patient name search on partial/incremental input the way they might for
-doctors.
+This supersedes the single free-text `q` design this document previously
+specified — see `app/services/patient_service.py` and
+`app/repositories/patient_repository.py` for the current implementation.
+**Open item, not yet vendor-confirmed:** the structured three-field shape
+above is what OpenAPI v1.1 specifies, but no test against the real server
+has tried it yet — every real-server observation to date
+(`real-evidence/2026-08-25_muslim-arabic-toolkit-run`) used a single joined
+`q` string and found a 3-word minimum on it. Testing the real server with
+`first_name`/`father_name`/`last_name` as separate parameters is the
+highest-value next verification step.
 
 ### 3.2 `GET /patients/{patient_id}`
 
@@ -189,9 +201,17 @@ apply here — inactive doctors remain retrievable by exact ID.
 
 | Parameter | Required | Description |
 |---|---|---|
-| `q` | No | Matches employee ID, full name, job title, department/section/administration IDs where available. |
-| `active_only` | No | Boolean, default `true`. |
-| `limit` / `offset` | No | Same pagination rules as patients. |
+| `limit` | No | Default **10** (not 100), min 1, max 500. |
+| `offset` | No | Default 0, min 0. |
+
+No `q` and no `active_only` on this endpoint — always lists active workers
+only. Earlier drafts of this document offered `q`/`active_only` here; they
+were removed because the real server was confirmed to silently ignore `q`
+on `/workers` (`real-evidence/README.md`), and the mock previously *did*
+filter on it, which was its own divergence in the other direction. Data
+conceptually comes from a separate HR system in production, enriched with
+department/job from the main database; `total` is the true count of all
+active employees.
 
 ### 3.6 `GET /workers/{employee_id}`
 
@@ -230,13 +250,13 @@ envelope, no wrapping `success`/`items` keys. Example:
 
 ```json
 {
-  "patient_id": "P-10025",
+  "patient_id": "10025",
   "full_name": "Ahmad Ali",
   "first_name": "Ahmad",
   "last_name": "Ali",
   "birth_date": "1980-05-12",
   "age": 46,
-  "sex": "M"
+  "sex": "Male"
 }
 ```
 
@@ -328,10 +348,11 @@ internal exception detail in either field.
 | `404` | Exact patient not found | `PATIENT_NOT_FOUND` |
 | `404` | Exact doctor not found | `DOCTOR_NOT_FOUND` |
 | `404` | Exact worker not found | `WORKER_NOT_FOUND` |
+| `404` | Unknown route | `NOT_FOUND` |
 | `405` | Unsupported HTTP method on a valid path | `METHOD_NOT_ALLOWED` |
-| `422` | Patient search called with no search criterion, or a parameter present but invalid (e.g. `limit=9999`, out of the 1–500 range) | `VALIDATION_ERROR` |
-| `500` | Unexpected server error | `INTERNAL_SERVER_ERROR` |
-| `503` | API is running but its data source is unreachable | (see health endpoint, section 2.4) |
+| `422` | Patient search called with no valid criterion, or a parameter present but invalid (e.g. `limit=9999`, out of the 1–500 range) | `VALIDATION_ERROR` |
+| `500` | Unexpected server error | `SERVER_ERROR` |
+| `503` | API is running but its data source is unreachable | `SERVICE_UNAVAILABLE` (see health endpoint, section 2.4, and the `/workers` HR-dependency case in section 3.5) |
 
 These exact `error` string values are part of the contract — the reference
 mock implementation returns precisely these codes, and the production API
@@ -374,16 +395,18 @@ These are different outcomes and must never be conflated:
 
 ## 9. OpenAPI specification
 
-The companion file `Hospital_Directory_API_OpenAPI.yaml` is the
-machine-readable, authoritative version of everything above — paths,
-parameters, schemas, required/nullable fields, and response codes are all
-formally defined there, and matches this document (Patient as a person-level
-resource, minimal Health response). Use it to generate server stubs/client
-SDKs and to validate responses in CI.
+The companion file `Hospital_Directory_API_OpenAPI_v1.1.yaml` (received from
+the vendor 2026-09-08, superseding the original `Hospital_Directory_API_OpenAPI.yaml`
+v1.0.0, kept alongside it for reference) is the machine-readable,
+authoritative version of everything above. Use it to generate server
+stubs/client SDKs and to validate responses in CI. See
+`vendor-deliverable/2026-09-08_v1.1-gap-analysis.md` for a full diff against
+the previous contract, the mock's prior implementation, and direct
+real-server evidence gathered before this document arrived.
 
 **Precedence when documents disagree:**
 
-1. `Hospital_Directory_API_OpenAPI.yaml` (wins on any conflict)
+1. `Hospital_Directory_API_OpenAPI_v1.1.yaml` (wins on any conflict)
 2. This document
 3. Any other prose explanation given verbally or in email
 

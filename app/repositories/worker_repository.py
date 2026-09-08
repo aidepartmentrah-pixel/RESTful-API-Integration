@@ -1,33 +1,18 @@
-from sqlalchemy import func, or_, select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models.worker import Worker
 
 
-def search_workers(
+def list_workers(
     db: Session,
-    q: str | None,
-    active_only: bool,
     limit: int,
     offset: int,
 ) -> tuple[list[Worker], int]:
-    stmt = select(Worker)
-
-    if active_only:
-        stmt = stmt.where(Worker.is_active.is_(True))
-
-    if q:
-        like = f"%{q}%"
-        stmt = stmt.where(
-            or_(
-                Worker.employee_id.ilike(like),
-                Worker.full_name.ilike(like),
-                Worker.job_title.ilike(like),
-                Worker.department_id.ilike(like),
-                Worker.section_id.ilike(like),
-                Worker.administration_id.ilike(like),
-            )
-        )
+    # OpenAPI v1.1 drops `q`/`active_only` from /workers entirely -- the real
+    # server was found to silently ignore `q`, so the contract no longer
+    # offers it. This always lists active workers only.
+    stmt = select(Worker).where(Worker.is_active.is_(True))
 
     total = db.scalar(select(func.count()).select_from(stmt.subquery())) or 0
 

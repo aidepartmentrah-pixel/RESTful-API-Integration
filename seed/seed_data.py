@@ -58,15 +58,22 @@ JOB_TITLES = [
 ]
 
 
-def random_name() -> tuple[str, str, str]:
-    """Returns (full_name, first_name, last_name) in Arabic or English."""
-    if random.random() < 0.5:
-        first = fake_ar.first_name()
-        last = fake_ar.last_name()
-    else:
-        first = fake_en.first_name()
-        last = fake_en.last_name()
-    return f"{first} {last}", first, last
+def random_person_names() -> dict[str, str | None]:
+    """First/father/last name parts for one person.
+
+    Arabic values are always populated (OpenAPI v1.1: full_name is built from
+    the Arabic variants only). English values are populated for a random
+    subset of fields, matching v1.1's "English name when stored, otherwise
+    Arabic" fallback rule for first_name/last_name.
+    """
+    return {
+        "first_name_ar": fake_ar.first_name(),
+        "first_name_en": fake_en.first_name() if random.random() < 0.4 else None,
+        "father_name_ar": fake_ar.first_name_male(),
+        "father_name_en": fake_en.first_name_male() if random.random() < 0.4 else None,
+        "last_name_ar": fake_ar.last_name(),
+        "last_name_en": fake_en.last_name() if random.random() < 0.4 else None,
+    }
 
 
 def compute_age(birth_date) -> int:
@@ -78,8 +85,8 @@ def compute_age(birth_date) -> int:
 
 def seed_patients(db) -> None:
     for patient_index in range(1, 101):
-        patient_id = f"P-{10000 + patient_index}"
-        full_name, first_name, last_name = random_name()
+        patient_id = str(10000 + patient_index)
+        names = random_person_names()
 
         has_birth_date = random.random() < 0.85
         birth_date = None
@@ -90,37 +97,43 @@ def seed_patients(db) -> None:
         elif random.random() < 0.5:
             age = random.randint(1, 95)
 
-        sex = random.choice(["M", "F"]) if random.random() < 0.95 else None
+        # OpenAPI v1.1: sex is a display name resolved via a codes service,
+        # not a fixed 1-char code.
+        sex = random.choice(["Male", "Female"]) if random.random() < 0.95 else None
 
         db.add(
             Patient(
                 patient_id=patient_id,
-                full_name=full_name,
-                first_name=first_name,
-                last_name=last_name,
                 birth_date=birth_date,
                 age=age,
                 sex=sex,
+                **names,
             )
         )
 
 
 def seed_doctors(db) -> None:
     for index in range(1, 51):
-        doctor_id = f"D-{1000 + index}"
-        full_name, _, _ = random_name()
+        doctor_id = str(1000 + index)
+        names = random_person_names()
+        full_name = f"Dr. {names['first_name_ar']} {names['father_name_ar']} {names['last_name_ar']}"
         specialty_id, specialty_name = random.choice(SPECIALTIES)
-        department_id, department_name = random.choice(DEPARTMENTS)
         is_active = random.random() < 0.85
 
         db.add(
             Doctor(
                 doctor_id=doctor_id,
-                full_name=f"Dr. {full_name}",
+                full_name=full_name,
+                first_name=names["first_name_ar"],
+                father_name=names["father_name_ar"],
+                last_name=names["last_name_ar"],
+                assistant_number=f"A-{2000 + index}" if random.random() < 0.5 else None,
                 specialty_id=specialty_id,
                 specialty_name=specialty_name,
-                department_id=department_id if random.random() < 0.9 else None,
-                department_name=department_name if random.random() < 0.9 else None,
+                # Always null today -- no department is modelled on Doctor
+                # (OpenAPI v1.1).
+                department_id=None,
+                department_name=None,
                 is_active=is_active,
             )
         )
@@ -128,8 +141,9 @@ def seed_doctors(db) -> None:
 
 def seed_workers(db) -> None:
     for index in range(1, 101):
-        employee_id = f"E-{5000 + index}"
-        full_name, _, _ = random_name()
+        employee_id = str(5000 + index)
+        names = random_person_names()
+        full_name = f"{names['first_name_ar']} {names['father_name_ar']} {names['last_name_ar']}"
         job_title = random.choice(JOB_TITLES)
         department_id, department_name = random.choice(DEPARTMENTS)
         has_department = random.random() < 0.85
