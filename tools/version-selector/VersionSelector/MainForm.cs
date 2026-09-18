@@ -2,15 +2,31 @@ namespace VersionSelector;
 
 public partial class MainForm : Form
 {
+    private const string DockerUnavailableMessage = "Docker does not appear to be available. Is Docker Desktop running?";
+
     private readonly IReadOnlyList<VersionEntry> _versions;
     private readonly IDockerRunner _dockerRunner;
 
-    public MainForm(IReadOnlyList<VersionEntry> versions, IDockerRunner dockerRunner)
+    public MainForm(IReadOnlyList<VersionEntry> versions, IDockerRunner dockerRunner, string registryPath)
     {
         _versions = versions;
         _dockerRunner = dockerRunner;
 
         InitializeComponent();
+
+        try
+        {
+            Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath);
+        }
+        catch
+        {
+            // Fall back to the WinForms default rather than fail to launch over an icon.
+        }
+
+        lblRegistryValue.Text = registryPath;
+        var toolTip = new ToolTip();
+        toolTip.SetToolTip(lblRegistryValue, registryPath);
+        lblVersionsValue.Text = _versions.Count.ToString();
 
         foreach (var version in _versions)
         {
@@ -58,8 +74,12 @@ public partial class MainForm : Form
 
         if (anyUnavailable)
         {
-            lblMessage.Text = "Docker does not appear to be available. Is Docker Desktop running?";
-            lblMessage.ForeColor = Color.Firebrick;
+            lblMessage.Text = DockerUnavailableMessage;
+            lblMessage.ForeColor = Theme.Danger;
+        }
+        else if (lblMessage.Text == DockerUnavailableMessage)
+        {
+            lblMessage.Text = "";
         }
     }
 
@@ -74,7 +94,7 @@ public partial class MainForm : Form
         btnStart.Enabled = false;
         btnStop.Enabled = false;
         btnRestart.Enabled = false;
-        lblMessage.ForeColor = SystemColors.ControlText;
+        lblMessage.ForeColor = Theme.AccentDark;
         lblMessage.Text = $"Running docker compose {ActionLabel(action)} for {version.Name}...";
         Refresh();
 
@@ -82,18 +102,18 @@ public partial class MainForm : Form
 
         if (result.DockerUnavailable)
         {
-            lblMessage.Text = "Docker does not appear to be available. Is Docker Desktop running?";
-            lblMessage.ForeColor = Color.Firebrick;
+            lblMessage.Text = DockerUnavailableMessage;
+            lblMessage.ForeColor = Theme.Danger;
         }
         else if (!result.Success)
         {
             lblMessage.Text = $"docker compose {ActionLabel(action)} failed for {version.Name}:\n{result.StandardError}";
-            lblMessage.ForeColor = Color.Firebrick;
+            lblMessage.ForeColor = Theme.Danger;
         }
         else
         {
             lblMessage.Text = $"{version.Name}: {ActionLabel(action)} succeeded.";
-            lblMessage.ForeColor = Color.DarkGreen;
+            lblMessage.ForeColor = Theme.Success;
         }
 
         UpdateButtonStates();

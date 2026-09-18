@@ -25,7 +25,7 @@ internal static class Program
             return;
         }
 
-        Application.Run(new MainForm(versions, dockerRunner));
+        Application.Run(new MainForm(versions, dockerRunner, registryPath));
     }
 
     /// <summary>Test mode: when VERSION_SELECTOR_FAKE_DOCKER_STATE is set,

@@ -8,6 +8,7 @@
     <Nullable>enable</Nullable>
     <RootNamespace>VersionSelector</RootNamespace>
     <AssemblyName>VersionSelector</AssemblyName>
+    <ApplicationIcon>Assets\VersionSelector.ico</ApplicationIcon>
   </PropertyGroup>
 
 </Project>
