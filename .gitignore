@@ -5,6 +5,14 @@ __pycache__/
 
 .env
 
+# Machine-specific registry for tools/version-selector -- see
+# tools/version-selector/local.versions.json.example for the shape.
+local.versions.json
+
+# .NET build output
+tools/version-selector/**/bin/
+tools/version-selector/**/obj/
+
 # Built release payload: regenerate with scripts/build_release.sh rather than
 # committing built images/checksums/secrets to source control.
 release/docker-images/*.tar

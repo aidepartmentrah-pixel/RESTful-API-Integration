@@ -1,0 +1,7 @@
+{
+  "unavailable": false,
+  "statuses": {
+    "mock-v11": "Running",
+    "mock-v12-dev": "Stopped"
+  }
+}

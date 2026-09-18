@@ -1,0 +1,16 @@
+{
+  "versions": [
+    {
+      "name": "v1.1 (stable)",
+      "composeProject": "mock-v11",
+      "workingDirectory": "C:\\fake\\RESTful-API-Integration-v1.1",
+      "port": 6000
+    },
+    {
+      "name": "v1.2-dev",
+      "composeProject": "mock-v12-dev",
+      "workingDirectory": "C:\\fake\\RESTful-API-Integration",
+      "port": 6001
+    }
+  ]
+}
