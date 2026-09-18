@@ -21,6 +21,7 @@ class Patient(Base):
     birth_date: Mapped[Date | None] = mapped_column(Date, nullable=True)
     age: Mapped[int | None] = mapped_column(Integer, nullable=True)
     sex: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    encounter_type: Mapped[str | None] = mapped_column(String(32), nullable=True)
 
     @property
     def first_name(self) -> str | None:

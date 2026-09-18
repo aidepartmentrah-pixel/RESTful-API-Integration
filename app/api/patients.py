@@ -4,7 +4,14 @@ from fastapi import APIRouter, Depends, Query
 
 from app.api.deps import DbSession, LimitParam, OffsetParam
 from app.core.security import require_api_key
-from app.schemas.patient import Patient, PatientListResponse
+from app.schemas.patient import (
+    FatherNameCandidate,
+    FatherNameCandidatesResponse,
+    FirstNameCandidate,
+    FirstNameCandidatesResponse,
+    Patient,
+    PatientListResponse,
+)
 from app.services import patient_service
 
 router = APIRouter(
@@ -32,6 +39,46 @@ def search_patients(
         total=total,
         limit=limit,
         offset=offset,
+    )
+
+
+# Registered before /{patient_id} -- a literal sub-path must win over the
+# dynamic path parameter, or "father-names" would be swallowed as a
+# patient_id value instead of matching this route.
+@router.get("/father-names", response_model=FatherNameCandidatesResponse)
+def get_father_name_candidates(
+    db: DbSession,
+    first_name: Annotated[str | None, Query(min_length=1)] = None,
+    last_name: Annotated[str | None, Query(min_length=1)] = None,
+    limit: Annotated[int, Query(ge=1, le=200)] = 50,
+) -> FatherNameCandidatesResponse:
+    candidates = patient_service.get_father_name_candidates(db, first_name, last_name, limit)
+    return FatherNameCandidatesResponse(
+        first_name=first_name or "",
+        last_name=last_name or "",
+        candidates=[
+            FatherNameCandidate(father_name=father_name, patient_count=count)
+            for father_name, count in candidates
+        ],
+        total_candidates=len(candidates),
+    )
+
+
+# Registered before /{patient_id} for the same reason as /father-names above.
+@router.get("/first-names", response_model=FirstNameCandidatesResponse)
+def get_first_name_candidates(
+    db: DbSession,
+    last_name: Annotated[str | None, Query(min_length=1)] = None,
+    limit: Annotated[int, Query(ge=1, le=200)] = 50,
+) -> FirstNameCandidatesResponse:
+    candidates = patient_service.get_first_name_candidates(db, last_name, limit)
+    return FirstNameCandidatesResponse(
+        last_name=last_name or "",
+        candidates=[
+            FirstNameCandidate(first_name=first_name, patient_count=count)
+            for first_name, count in candidates
+        ],
+        total_candidates=len(candidates),
     )
 
 

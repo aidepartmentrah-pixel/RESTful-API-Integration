@@ -9,7 +9,7 @@ from faker import Faker
 from sqlalchemy import select
 
 from app.core.database import Base, SessionLocal, engine
-from app.models import Doctor, Patient, Worker
+from app.models import Doctor, ErVisit, Patient, Worker
 
 SEED = 42
 random.seed(SEED)
@@ -42,6 +42,40 @@ DEPARTMENTS = [
     ("46", "Finance"),
     ("47", "Nursing"),
     ("48", "Laboratory"),
+]
+
+SECTIONS = [
+    ("1", "Inpatient Wards"),
+    ("2", "Outpatient Clinics"),
+    ("3", "Emergency Response"),
+    ("4", "Surgical Services"),
+    ("5", "Diagnostic Imaging"),
+    ("6", "Pharmacy Operations"),
+    ("7", "Records Management"),
+    ("8", "Facilities Maintenance"),
+    ("9", "Patient Transport"),
+    ("10", "Central Supply"),
+    ("11", "Billing"),
+    ("12", "Volunteer Services"),
+]
+
+ADMINISTRATIONS = [
+    ("1", "Medical Affairs"),
+    ("2", "Nursing Affairs"),
+    ("3", "Support Services"),
+    ("4", "Finance & Administration"),
+    ("5", "Quality & Patient Safety"),
+]
+
+CHIEF_COMPLAINTS = [
+    "Chest pain",
+    "Shortness of breath",
+    "Abdominal pain",
+    "Fever",
+    "Laceration",
+    "Fracture, suspected",
+    "Headache, severe",
+    "Allergic reaction",
 ]
 
 JOB_TITLES = [
@@ -100,6 +134,8 @@ def seed_patients(db) -> None:
         # OpenAPI v1.1: sex is a display name resolved via a codes service,
         # not a fixed 1-char code.
         sex = random.choice(["Male", "Female"]) if random.random() < 0.95 else None
+        # v1.2 proposed field -- see requirements/4-patient-encounter-type.
+        encounter_type = random.choice(["inpatient", "outpatient", None])
 
         db.add(
             Patient(
@@ -107,6 +143,7 @@ def seed_patients(db) -> None:
                 birth_date=birth_date,
                 age=age,
                 sex=sex,
+                encounter_type=encounter_type,
                 **names,
             )
         )
@@ -147,6 +184,10 @@ def seed_workers(db) -> None:
         job_title = random.choice(JOB_TITLES)
         department_id, department_name = random.choice(DEPARTMENTS)
         has_department = random.random() < 0.85
+        section_id, section_name = random.choice(SECTIONS)
+        has_section = random.random() < 0.85
+        administration_id, administration_name = random.choice(ADMINISTRATIONS)
+        has_administration = random.random() < 0.85
         is_active = random.random() < 0.85
         is_manager = random.choice([True, False]) if random.random() < 0.8 else None
 
@@ -158,10 +199,44 @@ def seed_workers(db) -> None:
                 job_title=job_title,
                 department_id=department_id if has_department else None,
                 department_name=department_name if has_department else None,
-                section_id=f"{random.randint(1, 12)}" if random.random() < 0.85 else None,
-                administration_id=f"{random.randint(1, 5)}" if random.random() < 0.85 else None,
+                section_id=section_id if has_section else None,
+                section_name=section_name if has_section else None,
+                administration_id=administration_id if has_administration else None,
+                administration_name=administration_name if has_administration else None,
                 is_manager=is_manager,
                 is_active=is_active,
+            )
+        )
+
+
+def seed_er_visits(db) -> None:
+    """PROPOSED v1.2 resource -- see
+    versions/v1.2/requirements/5-er-current-visits-hcopilot/requirement.md.
+    gender/age/chief_complaint are invented for mock realism; the
+    requirement doc flags all three as open items never confirmed by the
+    vendor, so nothing here should be read as a claim about their real shape.
+    """
+    now = datetime.now(TZ)
+    for index in range(1, 19):
+        er_visit_id = str(48200 + index)
+        first_name = fake_ar.first_name()
+        father_name = fake_ar.first_name_male()
+        last_name = fake_ar.last_name()
+        arrival_time = now - timedelta(minutes=random.randint(5, 480))
+        gender = random.choice(["Male", "Female", None])
+        age = random.randint(1, 95) if random.random() < 0.8 else None
+        chief_complaint = random.choice(CHIEF_COMPLAINTS) if random.random() < 0.85 else None
+
+        db.add(
+            ErVisit(
+                er_visit_id=er_visit_id,
+                first_name=first_name,
+                father_name=father_name,
+                last_name=last_name,
+                arrival_time=arrival_time,
+                gender=gender,
+                age=age,
+                chief_complaint=chief_complaint,
             )
         )
 
@@ -178,6 +253,7 @@ def main() -> None:
         seed_patients(db)
         seed_doctors(db)
         seed_workers(db)
+        seed_er_visits(db)
         db.commit()
         print("Seed data inserted successfully.")
     finally:

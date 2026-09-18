@@ -1,5 +1,10 @@
 # Real Vendor API Evidence
 
+> Internal analysis, not a vendor complaint list — see `versions/` for the
+> actual asks and the requirement docs behind them. This folder is the raw
+> research trail informing those asks, not something written for 3iSoft to
+> read directly.
+
 This folder holds raw, unedited evidence from actual HTTP round trips against
 the **real** Hospital Directory API — not the mock, not inference, not a
 guess. Claude has no network path to the real server (see

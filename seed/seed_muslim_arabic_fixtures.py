@@ -99,6 +99,105 @@ PATIENT_FIXTURES = [
      "should honestly return zero results (tests the add-as-new path)"),
 ]
 
+# Two duplicate-name GROUPS (20 + 20 = 40 patients, ids 90025-90064): same
+# first_name_ar + last_name_ar in both groups, but a different father_name_ar
+# per group -- i.e. two genuinely different real people/families who share a
+# first+last name, each with a large number of duplicate-looking rows of
+# their own. Added to reproduce a suspected production bug: when a search
+# for one father-name group returns a big pile of duplicates, does the
+# *other*, differently-fathered group still surface its own full result set,
+# or does the first group somehow prevent the second from ever appearing?
+# The three-field search is supposed to AND first_name/father_name/last_name
+# independently per column, so these two groups should never interact --
+# this fixture set exists to prove that empirically against a running
+# server, not just by reading the repository code.
+_DUPLICATE_GROUP_FIRST_NAME_AR = "عباس"
+_DUPLICATE_GROUP_LAST_NAME_AR = "زهرالدين"
+_DUPLICATE_GROUP_FATHER_NAMES = [("A", "محمد"), ("B", "حسن")]
+
+
+def _duplicate_group_fixtures():
+    fixtures = []
+    patient_id_num = 90025
+    for group_label, father_name_ar in _DUPLICATE_GROUP_FATHER_NAMES:
+        other_label = "B" if group_label == "A" else "A"
+        for i in range(20):
+            birth_date = date(1965 + i, 1 + (i * 7) % 12, 1 + (i * 3) % 28)
+            fixtures.append((
+                str(patient_id_num),
+                _DUPLICATE_GROUP_FIRST_NAME_AR,
+                father_name_ar,
+                _DUPLICATE_GROUP_LAST_NAME_AR,
+                birth_date,
+                None,
+                "Male",
+                f"duplicate-name-group {group_label}, record {i + 1}/20: same "
+                f"first+last name as group {other_label}, different father name "
+                f"({father_name_ar}) -- a genuinely different real person/group. "
+                f"Searching father_name='{father_name_ar}' must return exactly this "
+                f"group's 20 rows, independent of group {other_label}'s 20 rows.",
+            ))
+            patient_id_num += 1
+    return fixtures
+
+
+PATIENT_FIXTURES = PATIENT_FIXTURES + _duplicate_group_fixtures()
+
+# Two more duplicate-name GROUPS (20 + 20 = 40 patients, ids 90065-90104).
+# Same first_name_ar/last_name_ar as the 90025-90064 groups above, but
+# DIFFERENT father names (خالد/أحمد, not محمد/حسن) -- deliberately, so a
+# father_name search can't accidentally merge this set with the
+# 90025-90064 one (an earlier version of this fixture reused محمد/حسن here
+# and every search returned 40 merged rows instead of a clean 20, which
+# defeated both tests). Data shape: every record WITHIN a group shares the
+# SAME birth_date (representing one real person recorded many times --
+# e.g. one row per hospital admission, since the vendor's real data is
+# admission-centric, not person-centric), while the two groups' birth
+# dates differ from each other (distinguishable as two different real
+# people who happen to share a name, same convention as 90016/90017).
+# Requested by the HCAT team to test their own dedup logic end-to-end
+# against this mock ("same name + same birth_date = one real person
+# re-entered; same name + different birth_date = two real people") -- a
+# different question from the 90025-90064 groups above, which test
+# whether one group's search can block another's. This mock returns all
+# 40 raw rows unmodified; the dedup itself is HCAT's concern on receipt,
+# not this API's.
+_DUPLICATE_GROUP_SAME_BIRTH_DATE_GROUPS = [
+    ("A2", "خالد", date(1980, 5, 10)),
+    ("B2", "أحمد", date(1975, 3, 22)),
+]
+
+
+def _duplicate_group_same_birth_date_fixtures():
+    fixtures = []
+    patient_id_num = 90065
+    for group_label, father_name_ar, birth_date in _DUPLICATE_GROUP_SAME_BIRTH_DATE_GROUPS:
+        other_label = "B2" if group_label == "A2" else "A2"
+        for i in range(20):
+            fixtures.append((
+                str(patient_id_num),
+                _DUPLICATE_GROUP_FIRST_NAME_AR,
+                father_name_ar,
+                _DUPLICATE_GROUP_LAST_NAME_AR,
+                birth_date,
+                None,
+                "Male",
+                f"duplicate-name-group {group_label}, record {i + 1}/20: same "
+                f"first+last name as group {other_label}, different father name "
+                f"({father_name_ar}), and ALL 20 rows in this group share the same "
+                f"birth_date ({birth_date}) -- one real person recorded 20 times "
+                f"(one row per admission). Group {other_label} shares this group's "
+                f"first+last name but has its own distinct shared birth_date, so "
+                f"the two groups are a different real person each. Tests HCAT's "
+                f"dedup logic: same name+birth_date collapses to one person, "
+                f"different birth_date stays two.",
+            ))
+            patient_id_num += 1
+    return fixtures
+
+
+PATIENT_FIXTURES = PATIENT_FIXTURES + _duplicate_group_same_birth_date_fixtures()
+
 DOCTOR_FIXTURES = [
     ("9001", "حيدر", "علي", "رحال", "1", "Cardiology"),
     ("9002", "جعفر", "حسن", "زعيتر", "9", "Internal Medicine"),

@@ -11,7 +11,9 @@ class Worker(BaseModel):
     department_id: str | None = None
     department_name: str | None = None
     section_id: str | None = None
+    section_name: str | None = None
     administration_id: str | None = None
+    administration_name: str | None = None
     is_manager: bool | None = None
     is_active: bool
 

@@ -3,7 +3,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from app.api import doctors, health, patients, workers
+from app.api import doctors, er, health, patients, workers
 from app.core.errors import ApiError
 
 
@@ -28,6 +28,7 @@ app.include_router(health.router, prefix=API_PREFIX)
 app.include_router(patients.router, prefix=API_PREFIX)
 app.include_router(doctors.router, prefix=API_PREFIX)
 app.include_router(workers.router, prefix=API_PREFIX)
+app.include_router(er.router, prefix=API_PREFIX)
 
 
 @app.exception_handler(ApiError)

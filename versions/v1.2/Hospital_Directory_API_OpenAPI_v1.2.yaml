@@ -1,0 +1,927 @@
+openapi: 3.0.3
+info:
+  title: Hospital Directory Read API
+  version: 1.2.0-draft
+  description: |
+    Read-only internal API for patients, doctors, and workers. Used by HCAT and HCopilot.
+
+    This is a PROPOSED next version, authored by the API's consumer (not
+    3iSoft) as a formal, testable ask — see `../v1.2/requirements/` for
+    the rationale behind each addition and `../v1.2/evidence.md` for what
+    is and isn't backed by real-server testing. Every path and field below
+    carries an `x-status` of either `implemented` (already built and
+    verified in the reference mock) or `proposed` (not yet built anywhere,
+    including the mock, until 3iSoft accepts and/or it's actually needed).
+
+    Transport notes:
+      - Every response is `application/json`.
+      - All endpoints are GET; the API is strictly read-only.
+      - Every endpoint except `/health` requires the `X-API-Key` header.
+
+servers:
+- url: http://localhost:18080/his-general/api/directory/v1
+  description: |
+    Development (Eclipse-managed WildFly, +10000 port offset).
+- url: https://TO-BE-ASSIGNED/his-general/api/directory/v1
+  description: Production API
+
+security:
+- ApiKeyAuth: []
+
+tags:
+- name: Health
+  description: Public liveness/readiness probe.
+- name: Patients
+  description: Patient lookup. Search is restricted (see the endpoint description).
+- name: Doctors
+  description: Doctor search and lookup, backed by the his-general database.
+- name: Workers
+  description: |
+    Employee listing and lookup. Backed by the separate HR application (called
+    over HTTP on the same WildFly instance), NOT by the his-general database.
+- name: ER
+  x-status: proposed
+  description: |
+    PROPOSED, for HCopilot. Not an extension of the Directory API's own
+    data source — the ER roster currently lives behind a separate system
+    ("meraj", a JSF application, not JSON). This ask is for 3iSoft to
+    expose it as a new read-only resource on the same his-general Directory
+    API host/auth/conventions, regardless of where they source it
+    internally. See requirement 5 for the full rationale.
+
+paths:
+  /health:
+    get:
+      tags:
+      - Health
+      x-status: implemented
+      summary: Check API health
+      description: |
+        Public — no API key required. Returns `healthy` only when the required
+        dependency (the his-general database) actually answers a probe query
+        (`SELECT 1`); any failure yields `503` with status `unhealthy`.
+
+        `service` is always `his-general-directory` and `api_version` is always
+        `1.0.0` (the API contract version, independent of this document's version).
+      security: []
+      responses:
+        '200':
+          description: API and required dependency are healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              example:
+                status: healthy
+                service: his-general-directory
+                api_version: 1.0.0
+                timestamp: '2026-09-04T10:15:00Z'
+        '503':
+          description: API dependency unavailable (database probe failed)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              example:
+                status: unhealthy
+                service: his-general-directory
+                api_version: 1.0.0
+                timestamp: '2026-09-04T10:15:00Z'
+
+  /patients:
+    get:
+      tags:
+      - Patients
+      x-status: implemented
+      summary: Search patients (search is required and restricted)
+      description: |
+        A search must be one of exactly two shapes:
+
+          a) `patient_id` — exact numeric id match; or
+          b) `first_name` AND `father_name` AND `last_name` — all three together.
+
+        Any other combination (a name field on its own, or first + last without
+        father) is rejected with `422 VALIDATION_ERROR` and the message:
+        `Provide 'patient_id', or all three of 'first_name', 'father_name' and 'last_name'`.
+        This is intentional: a patient can never be found from a partial name.
+
+        Name matching semantics:
+          - Each field is matched case-insensitively as a **substring** against
+            **only its own column** — `first_name` against the first-name column,
+            `father_name` against the father-name column, `last_name` against the
+            last-name column. Fields are never cross-matched.
+          - Each field matches either the Arabic **or** the English variant of that
+            column.
+          - The three conditions are AND-ed: a patient must satisfy all three.
+          - Supplying `patient_id` together with name fields AND-s them as well.
+
+        Results are ordered by Arabic first name, then Arabic last name.
+      parameters:
+      - $ref: '#/components/parameters/PatientIdFilter'
+      - $ref: '#/components/parameters/FirstName'
+      - $ref: '#/components/parameters/FatherName'
+      - $ref: '#/components/parameters/LastName'
+      - $ref: '#/components/parameters/Limit'
+      - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: |
+            Matching patients. `total` is the full match count ignoring
+            `limit`/`offset`. An empty `items` array with `total: 0` is a normal
+            200 response — not a 404.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PatientListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          description: |
+            Search criteria missing/incomplete, or `limit`/`offset` out of range.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: VALIDATION_ERROR
+                message: Provide 'patient_id', or all three of 'first_name', 'father_name'
+                  and 'last_name'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /patients/{patient_id}:
+    get:
+      tags:
+      - Patients
+      x-status: implemented
+      summary: Get one exact patient
+      description: |
+        Exact lookup by primary key. A non-numeric id can never match a record and
+        is therefore reported as `404 PATIENT_NOT_FOUND` (not `400`).
+      parameters:
+      - name: patient_id
+        in: path
+        required: true
+        description: Numeric patient id, e.g. `10025`.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Patient
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Patient'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: No such patient (error code `PATIENT_NOT_FOUND`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: PATIENT_NOT_FOUND
+                message: The requested patient was not found
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /patients/father-names:
+    get:
+      tags:
+      - Patients
+      x-status: implemented
+      summary: List candidate father names for a first+last name pair
+      description: |
+        Returns the distinct father-name values on file among patients
+        matching `first_name` + `last_name`, ordered by how many patient
+        records exist under each (most common first). Replaces a client-side
+        32-candidate guessing loop with one authoritative lookup. Does not
+        return patient records — once a `father_name` is confirmed, call
+        `GET /patients` with all three fields.
+
+        See `requirements/1-father-name-candidates/requirement.md` for the
+        full rationale and format decisions (timezone, encoding, no
+        pagination, etc.).
+      parameters:
+      - name: first_name
+        in: query
+        required: false
+        description: |
+          Not enforced as `required` at the schema level (matches the
+          `/patients` name parameters' convention in v1.1) — but a request
+          missing this, or `last_name`, is rejected with `422
+          VALIDATION_ERROR` at runtime; both are effectively mandatory.
+        schema:
+          type: string
+          minLength: 1
+      - name: last_name
+        in: query
+        required: false
+        schema:
+          type: string
+          minLength: 1
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 200
+          default: 50
+      responses:
+        '200':
+          description: Candidate father names, ordered by patient_count descending.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FatherNameCandidatesResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          description: '`first_name` or `last_name` missing/empty, or `limit` out of range.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: VALIDATION_ERROR
+                message: Both 'first_name' and 'last_name' are required
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /patients/first-names:
+    get:
+      tags:
+      - Patients
+      x-status: proposed
+      summary: List candidate first names for a family name
+      description: |
+        PROPOSED — not yet implemented in the mock. Symmetrical companion
+        to `/patients/father-names`, for when only the family name is
+        known. Returns distinct first-name candidates for a `last_name`,
+        with counts. See `requirements/2-first-name-candidates/requirement.md`.
+      parameters:
+      - name: last_name
+        in: query
+        required: false
+        description: |
+          Family name to match against the Arabic or English last-name column
+          only, case-insensitive substring. Not enforced as `required` at the
+          schema level (same convention as `father-names`) — a request
+          missing it is expected to be rejected with `422 VALIDATION_ERROR`
+          at runtime, per `requirements/2-first-name-candidates/requirement.md`.
+        schema:
+          type: string
+          minLength: 1
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 200
+          default: 50
+      responses:
+        '200':
+          description: First-name candidates; an empty result is a normal 200.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FirstNameCandidatesResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          description: Missing/blank last_name or an invalid limit.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: VALIDATION_ERROR
+                message: "'last_name' is required"
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /doctors:
+    get:
+      tags:
+      - Doctors
+      x-status: implemented
+      summary: Search or list doctors
+      description: |
+        Search is optional — with no parameters this lists active doctors, ordered
+        by full name.
+
+        When `q` is supplied it is matched case-insensitively as a **substring**
+        against any of: full name, first name, father name, last name, assistant
+        number, or the numeric id rendered as text. A hit on any one of these
+        qualifies (OR).
+      parameters:
+      - $ref: '#/components/parameters/OptionalQuery'
+      - $ref: '#/components/parameters/ActiveOnly'
+      - $ref: '#/components/parameters/Limit'
+      - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: Matching doctors
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DoctorListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /doctors/{doctor_id}:
+    get:
+      tags:
+      - Doctors
+      x-status: implemented
+      summary: Get one doctor
+      description: |
+        Exact lookup by primary key. Ignores `active_only` — an inactive doctor is
+        still returned (with `is_active: false`). A non-numeric id yields
+        `404 DOCTOR_NOT_FOUND`.
+      parameters:
+      - name: doctor_id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Doctor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Doctor'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: No such doctor (error code `DOCTOR_NOT_FOUND`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /workers:
+    get:
+      tags:
+      - Workers
+      x-status: implemented
+      summary: List workers (active employees)
+      description: |
+        Data source: the separate HR application. No `q` or `active_only` —
+        always lists active employees only (confirmed the real server
+        silently ignores `q` on this endpoint; the mock no longer offers it
+        either).
+      parameters:
+      - $ref: '#/components/parameters/WorkerLimit'
+      - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: Workers page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkerListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /workers/{employee_id}:
+    get:
+      tags:
+      - Workers
+      x-status: implemented
+      summary: Get one worker
+      description: |
+        Exact lookup by HR employee id. `is_active` is always `true` for any
+        employee found by this route (HR exposes no active flag on this call).
+      parameters:
+      - name: employee_id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Worker
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Worker'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: No such worker (error code `WORKER_NOT_FOUND`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /er/current-visits:
+    get:
+      tags:
+      - ER
+      x-status: proposed
+      x-servers-note: |
+        PROPOSED endpoint. Data currently lives behind a separate system
+        ("meraj", JSF, no JSON API today) — this ask ties it to the same
+        his-general Directory API host/auth/conventions regardless of
+        3iSoft's internal sourcing. See requirement 5 for full context.
+      summary: Live roster of patients currently in the ER (for HCopilot)
+      description: |
+        PROPOSED — not yet implemented anywhere, including the mock.
+        Returns every patient currently present in the ER as a complete,
+        unpaginated snapshot (no `limit`/`offset` — the caller always gets
+        everything, since departure-detection via polling requires a
+        complete set each time, not a page of one).
+
+        See `requirements/5-er-current-visits-hcopilot/requirement.md` for
+        the full field-by-field format spec (timezone, gender/age/
+        chief_complaint open items, encoding).
+      responses:
+        '200':
+          description: Full current ER roster, ordered by arrival_time ascending.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErVisitListResponse'
+              example:
+                success: true
+                items:
+                - er_visit_id: '48213'
+                  first_name: Ø¹Ø¨Ø§Ø³
+                  father_name: Ù…Ø­Ù…Ø¯
+                  last_name: Ø²Ù‡Ø±Ø§Ù„Ø¯ÙŠÙ†
+                  arrival_time: '2026-09-18T14:32:00+03:00'
+                  gender: null
+                  age: null
+                  chief_complaint: null
+                total: 1
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: |
+        Required on every endpoint except `/health`. Comparison is length-constant.
+
+  parameters:
+    PatientIdFilter:
+      name: patient_id
+      in: query
+      required: false
+      schema:
+        type: string
+      example: '10025'
+    FirstName:
+      name: first_name
+      in: query
+      required: false
+      schema:
+        type: string
+        minLength: 1
+    FatherName:
+      name: father_name
+      in: query
+      required: false
+      schema:
+        type: string
+        minLength: 1
+    LastName:
+      name: last_name
+      in: query
+      required: false
+      schema:
+        type: string
+        minLength: 1
+    OptionalQuery:
+      name: q
+      in: query
+      required: false
+      schema:
+        type: string
+        minLength: 1
+    ActiveOnly:
+      name: active_only
+      in: query
+      required: false
+      schema:
+        type: boolean
+        default: true
+    Limit:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 500
+        default: 100
+    WorkerLimit:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 500
+        default: 10
+    Offset:
+      name: offset
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+
+  schemas:
+    Patient:
+      type: object
+      required:
+      - patient_id
+      - full_name
+      properties:
+        patient_id:
+          type: string
+          example: '10025'
+        full_name:
+          type: string
+          nullable: true
+        first_name:
+          type: string
+          nullable: true
+        last_name:
+          type: string
+          nullable: true
+        birth_date:
+          type: string
+          format: date
+          nullable: true
+        age:
+          type: integer
+          minimum: 0
+          maximum: 150
+          nullable: true
+        sex:
+          type: string
+          nullable: true
+        encounter_type:
+          type: string
+          nullable: true
+          x-status: proposed
+          description: |
+            PROPOSED, not yet implemented. `"inpatient"` or `"outpatient"`
+            (exact allowed values to be confirmed). Describes this one
+            record — coherent because, per confirmed real-server behavior,
+            `patient_id` is already effectively per-admission, not
+            per-deduplicated-person. See
+            `requirements/4-patient-encounter-type/requirement.md`.
+          example: outpatient
+
+    Doctor:
+      type: object
+      required:
+      - doctor_id
+      - full_name
+      - is_active
+      properties:
+        doctor_id:
+          type: string
+          example: '116'
+        full_name:
+          type: string
+          nullable: true
+        specialty_id:
+          type: string
+          nullable: true
+        specialty_name:
+          type: string
+          nullable: true
+        department_id:
+          type: string
+          nullable: true
+        department_name:
+          type: string
+          nullable: true
+        is_active:
+          type: boolean
+
+    Worker:
+      type: object
+      required:
+      - employee_id
+      - full_name
+      - is_active
+      properties:
+        employee_id:
+          type: string
+          example: '205'
+        full_name:
+          type: string
+          nullable: true
+        job_id:
+          type: string
+          nullable: true
+        job_title:
+          type: string
+          nullable: true
+        department_id:
+          type: string
+          nullable: true
+        department_name:
+          type: string
+          nullable: true
+        section_id:
+          type: string
+          nullable: true
+        section_name:
+          type: string
+          nullable: true
+          x-status: proposed
+          description: |
+            PROPOSED, not yet implemented. Display name resolved from
+            `section_id`, same convention as `department_name`. See
+            `requirements/3-worker-section-administration-names/requirement.md`.
+        administration_id:
+          type: string
+          nullable: true
+        administration_name:
+          type: string
+          nullable: true
+          x-status: proposed
+          description: |
+            PROPOSED, not yet implemented. Same convention as `section_name`.
+        is_manager:
+          type: boolean
+          nullable: true
+        is_active:
+          type: boolean
+
+    FatherNameCandidate:
+      type: object
+      x-status: implemented
+      required:
+      - father_name
+      - patient_count
+      properties:
+        father_name:
+          type: string
+          example: 'Ù…Ø­Ù…Ø¯'
+        patient_count:
+          type: integer
+          minimum: 1
+
+    FatherNameCandidatesResponse:
+      type: object
+      x-status: implemented
+      required:
+      - first_name
+      - last_name
+      - candidates
+      - total_candidates
+      properties:
+        success:
+          type: boolean
+          example: true
+        first_name:
+          type: string
+        last_name:
+          type: string
+        candidates:
+          type: array
+          items:
+            $ref: '#/components/schemas/FatherNameCandidate'
+        total_candidates:
+          type: integer
+          minimum: 0
+
+    FirstNameCandidate:
+      type: object
+      x-status: proposed
+      required:
+      - first_name
+      - patient_count
+      properties:
+        first_name:
+          type: string
+        patient_count:
+          type: integer
+          minimum: 1
+
+    FirstNameCandidatesResponse:
+      type: object
+      x-status: implemented
+      required:
+      - last_name
+      - candidates
+      - total_candidates
+      properties:
+        success:
+          type: boolean
+          example: true
+        last_name:
+          type: string
+        candidates:
+          type: array
+          items:
+            $ref: '#/components/schemas/FirstNameCandidate'
+        total_candidates:
+          type: integer
+          minimum: 0
+
+    ErVisit:
+      type: object
+      x-status: proposed
+      required:
+      - er_visit_id
+      - first_name
+      - father_name
+      - last_name
+      - arrival_time
+      properties:
+        er_visit_id:
+          type: string
+          description: Unique per ER visit. Opaque — treat as a plain string, do not parse.
+        first_name:
+          type: string
+        father_name:
+          type: string
+        last_name:
+          type: string
+        arrival_time:
+          type: string
+          format: date-time
+          description: ISO-8601 with timezone offset. Timezone to be confirmed with vendor (assumed UTC+3).
+        gender:
+          type: string
+          nullable: true
+          description: Shape not yet confirmed — do not assume it matches Patient.sex's format.
+        age:
+          type: integer
+          nullable: true
+        chief_complaint:
+          type: string
+          nullable: true
+          description: Coded vs. free text not yet confirmed with vendor.
+
+    ErVisitListResponse:
+      type: object
+      x-status: proposed
+      required:
+      - success
+      - items
+      - total
+      properties:
+        success:
+          type: boolean
+          example: true
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ErVisit'
+        total:
+          type: integer
+          minimum: 0
+          description: |
+            No limit/offset by design — this endpoint always returns the
+            complete current snapshot, required for correct departure
+            detection via polling.
+
+    PatientListResponse:
+      allOf:
+      - $ref: '#/components/schemas/ListEnvelope'
+      - type: object
+        properties:
+          items:
+            type: array
+            items:
+              $ref: '#/components/schemas/Patient'
+    DoctorListResponse:
+      allOf:
+      - $ref: '#/components/schemas/ListEnvelope'
+      - type: object
+        properties:
+          items:
+            type: array
+            items:
+              $ref: '#/components/schemas/Doctor'
+    WorkerListResponse:
+      allOf:
+      - $ref: '#/components/schemas/ListEnvelope'
+      - type: object
+        properties:
+          items:
+            type: array
+            items:
+              $ref: '#/components/schemas/Worker'
+
+    ListEnvelope:
+      type: object
+      required:
+      - success
+      - items
+      - total
+      - limit
+      - offset
+      properties:
+        success:
+          type: boolean
+          example: true
+        items:
+          type: array
+          items: {}
+        total:
+          type: integer
+          minimum: 0
+        limit:
+          type: integer
+          minimum: 1
+        offset:
+          type: integer
+          minimum: 0
+
+    Error:
+      type: object
+      required:
+      - error
+      - message
+      properties:
+        error:
+          type: string
+          example: PATIENT_NOT_FOUND
+        message:
+          type: string
+          example: The requested patient was not found
+
+    HealthResponse:
+      type: object
+      required:
+      - status
+      properties:
+        status:
+          type: string
+          enum:
+          - healthy
+          - unhealthy
+        service:
+          type: string
+        api_version:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+      additionalProperties: true
+
+  responses:
+    Unauthorized:
+      description: Missing or invalid API key (code `UNAUTHORIZED`)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: UNAUTHORIZED
+            message: Missing or invalid API key
+    ValidationError:
+      description: Invalid parameter value (code `VALIDATION_ERROR`)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    ServerError:
+      description: Unexpected server error (code `SERVER_ERROR`)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    ServiceUnavailable:
+      description: API dependency unavailable (code `SERVICE_UNAVAILABLE`)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

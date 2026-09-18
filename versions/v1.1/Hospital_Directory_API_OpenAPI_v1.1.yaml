@@ -1,0 +1,782 @@
+openapi: 3.0.3
+info:
+  title: Hospital Directory Read API
+  version: 1.1.0
+  description: |
+    Read-only internal API for patients, doctors, and workers. Used by HCAT and HCopilot.
+
+    Transport notes:
+      - Every response is `application/json`.
+      - All endpoints are GET; the API is strictly read-only.
+      - Every endpoint except `/health` requires the `X-API-Key` header.
+
+servers:
+- url: http://localhost:18080/his-general/api/directory/v1
+  description: |
+    Development (Eclipse-managed WildFly, +10000 port offset).
+- url: https://TO-BE-ASSIGNED/his-general/api/directory/v1
+  description: Production API
+
+security:
+- ApiKeyAuth: []
+
+tags:
+- name: Health
+  description: Public liveness/readiness probe.
+- name: Patients
+  description: Patient lookup. Search is restricted (see the endpoint description).
+- name: Doctors
+  description: Doctor search and lookup, backed by the his-general database.
+- name: Workers
+  description: |
+    Employee listing and lookup. Backed by the separate HR application (called
+    over HTTP on the same WildFly instance), NOT by the his-general database.
+
+paths:
+  /health:
+    get:
+      tags:
+      - Health
+      summary: Check API health
+      description: |
+        Public â no API key required. Returns `healthy` only when the required
+        dependency (the his-general database) actually answers a probe query
+        (`SELECT 1`); any failure yields `503` with status `unhealthy`.
+
+        `service` is always `his-general-directory` and `api_version` is always
+        `1.0.0` (the API contract version, independent of this document's version).
+      security: []
+      responses:
+        '200':
+          description: API and required dependency are healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              example:
+                status: healthy
+                service: his-general-directory
+                api_version: 1.0.0
+                timestamp: '2026-09-04T10:15:00Z'
+        '503':
+          description: API dependency unavailable (database probe failed)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              example:
+                status: unhealthy
+                service: his-general-directory
+                api_version: 1.0.0
+                timestamp: '2026-09-04T10:15:00Z'
+
+  /patients:
+    get:
+      tags:
+      - Patients
+      summary: Search patients (search is required and restricted)
+      description: |
+
+        A search must be one of exactly two shapes:
+
+          a) `patient_id` â exact numeric id match; or
+          b) `first_name` AND `father_name` AND `last_name` â all three together.
+
+        Any other combination (a name field on its own, or first + last without
+        father) is rejected with `422 VALIDATION_ERROR` and the message:
+        `Provide 'patient_id', or all three of 'first_name', 'father_name' and 'last_name'`.
+        This is intentional: a patient can never be found from a partial name.
+
+        Name matching semantics:
+          - Each field is matched case-insensitively as a **substring** against
+            **only its own column** â `first_name` against the first-name column,
+            `father_name` against the father-name column, `last_name` against the
+            last-name column. Fields are never cross-matched.
+          - Each field matches either the Arabic **or** the English variant of that
+            column.
+          - The three conditions are AND-ed: a patient must satisfy all three.
+          - Supplying `patient_id` together with name fields AND-s them as well.
+
+        Results are ordered by Arabic first name, then Arabic last name.
+
+
+      parameters:
+      - $ref: '#/components/parameters/PatientIdFilter'
+      - $ref: '#/components/parameters/FirstName'
+      - $ref: '#/components/parameters/FatherName'
+      - $ref: '#/components/parameters/LastName'
+      - $ref: '#/components/parameters/Limit'
+      - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: |
+            Matching patients. `total` is the full match count ignoring
+            `limit`/`offset`. An empty `items` array with `total: 0` is a normal
+            200 response â not a 404.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PatientListResponse'
+              example:
+                success: true
+                items:
+                - patient_id: '10025'
+                  full_name: Ø£Ø­ÙØ¯ Ø¹ÙÙ Ø­Ø³Ù
+                  first_name: Ahmad
+                  last_name: Hassan
+                  birth_date: '1990-01-15'
+                  age: 36
+                  sex: Male
+                total: 1
+                limit: 100
+                offset: 0
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          description: |
+            Search criteria missing/incomplete, or `limit`/`offset` out of range.
+            Error code is always `VALIDATION_ERROR`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: VALIDATION_ERROR
+                message: Provide 'patient_id', or all three of 'first_name', 'father_name'
+                  and 'last_name'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /patients/{patient_id}:
+    get:
+      tags:
+      - Patients
+      summary: Get one exact patient
+      description: |
+        Exact lookup by primary key. A non-numeric id can never match a record and
+        is therefore reported as `404 PATIENT_NOT_FOUND` (not `400`).
+      parameters:
+      - name: patient_id
+        in: path
+        required: true
+        description: Numeric patient id, e.g. `10025`.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Patient
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Patient'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: No such patient (error code `PATIENT_NOT_FOUND`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: PATIENT_NOT_FOUND
+                message: The requested patient was not found
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /doctors:
+    get:
+      tags:
+      - Doctors
+      summary: Search or list doctors
+      description: |
+        Search is optional â with no parameters this lists active doctors, ordered
+        by full name.
+
+        When `q` is supplied it is matched case-insensitively as a **substring**
+        against any of: full name, first name, father name, last name, assistant
+        number, or the numeric id rendered as text. A hit on any one of these
+        qualifies (OR).
+      parameters:
+      - $ref: '#/components/parameters/OptionalQuery'
+      - $ref: '#/components/parameters/ActiveOnly'
+      - $ref: '#/components/parameters/Limit'
+      - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: Matching doctors
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DoctorListResponse'
+              example:
+                success: true
+                items:
+                - doctor_id: '116'
+                  full_name: Moussa Hakim
+                  specialty_id: '1.1'
+                  specialty_name: Eyes
+                  department_id: null
+                  department_name: null
+                  is_active: true
+                total: 1
+                limit: 100
+                offset: 0
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /doctors/{doctor_id}:
+    get:
+      tags:
+      - Doctors
+      summary: Get one doctor
+      description: |
+        Exact lookup by primary key. Ignores `active_only` â an inactive doctor is
+        still returned (with `is_active: false`). A non-numeric id yields
+        `404 DOCTOR_NOT_FOUND`.
+      parameters:
+      - name: doctor_id
+        in: path
+        required: true
+        description: Numeric doctor id, e.g. `116`.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Doctor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Doctor'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: No such doctor (error code `DOCTOR_NOT_FOUND`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: DOCTOR_NOT_FOUND
+                message: The requested doctor was not found
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /workers:
+    get:
+      tags:
+      - Workers
+      summary: List workers (active employees)
+      description: |
+
+        Data source: the separate HR application, called over HTTP on the same
+        WildFly instance. Department and job are then enriched from his-general.
+        If HR is unreachable or returns an unparseable body, the whole request
+        fails with `503 SERVICE_UNAVAILABLE`.
+
+        Paging is applied in-memory after HR returns the full active-employee list,
+        so `total` is the true count of active employees.
+      parameters:
+      - $ref: '#/components/parameters/WorkerLimit'
+      - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: Workers page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkerListResponse'
+              example:
+                success: true
+                items:
+                - employee_id: '205'
+                  full_name: Hassan Ibrahim
+                  job_id: '12'
+                  job_title: Nurse
+                  department_id: '3'
+                  department_name: ICU
+                  section_id: null
+                  administration_id: null
+                  is_manager: null
+                  is_active: true
+                total: 87
+                limit: 10
+                offset: 0
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /workers/{employee_id}:
+    get:
+      tags:
+      - Workers
+      summary: Get one worker
+      description: |
+        Exact lookup by HR employee id. A non-numeric id yields
+        `404 WORKER_NOT_FOUND`.
+
+        Caveat: HR's single-employee endpoint does not expose an active flag, so
+        `is_active` is reported as `true` for any employee found by this route.
+      parameters:
+      - name: employee_id
+        in: path
+        required: true
+        description: Numeric HR employee id, e.g. `205`.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Worker
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Worker'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: No such worker (error code `WORKER_NOT_FOUND`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: WORKER_NOT_FOUND
+                message: The requested worker was not found
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: |
+        Required on every endpoint except `/health`. The expected key is resolved
+        server-side from the system property `his.directory.apiKey`, falling back
+        to the environment variable `HIS_DIRECTORY_API_KEY`. There is **no built-in
+        default**: if neither is configured the server fails closed and rejects
+        every request with `401`. Comparison is length-constant.
+
+  parameters:
+    PatientIdFilter:
+      name: patient_id
+      in: query
+      required: false
+      description: |
+        Exact numeric patient id. Either this OR the full
+        first/father/last name trio must be supplied. A non-numeric value matches
+        nothing (returns an empty page, not an error).
+      schema:
+        type: string
+      example: '10025'
+    FirstName:
+      name: first_name
+      in: query
+      required: false
+      description: |
+        Patient first name. Case-insensitive substring, matched against the Arabic
+        or English first-name column only. Must be sent together with
+        `father_name` and `last_name`.
+      schema:
+        type: string
+        minLength: 1
+    FatherName:
+      name: father_name
+      in: query
+      required: false
+      description: |
+        Patient father name. Case-insensitive substring, matched against the Arabic
+        or English father-name column only. Must be sent together with
+        `first_name` and `last_name`. Not returned in the response body.
+      schema:
+        type: string
+        minLength: 1
+    LastName:
+      name: last_name
+      in: query
+      required: false
+      description: |
+        Patient last name. Case-insensitive substring, matched against the Arabic
+        or English last-name column only. Must be sent together with `first_name`
+        and `father_name`.
+      schema:
+        type: string
+        minLength: 1
+    OptionalQuery:
+      name: q
+      in: query
+      required: false
+      description: |
+        Free-text doctor search. Case-insensitive substring, OR-matched across full
+        name, first/father/last name, assistant number and the id as text. Omit to
+        list without filtering. (Only `/doctors` has this parameter â `/patients`
+        and `/workers` do not.)
+      schema:
+        type: string
+        minLength: 1
+    ActiveOnly:
+      name: active_only
+      in: query
+      required: false
+      description: |
+        `true` (default) restricts the result to active doctors; `false` includes
+        inactive ones. Only supported on `/doctors`.
+      schema:
+        type: boolean
+        default: true
+    Limit:
+      name: limit
+      in: query
+      required: false
+      description: |
+        Page size. Out-of-range values are rejected with `422 VALIDATION_ERROR`
+        ("limit must be between 1 and 500").
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 500
+        default: 100
+    WorkerLimit:
+      name: limit
+      in: query
+      required: false
+      description: |
+        Page size for `/workers`. Same 1..500 validation as elsewhere, but the
+        default when omitted is **10**, not 100.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 500
+        default: 10
+    Offset:
+      name: offset
+      in: query
+      required: false
+      description: |
+        Number of records to skip. Negative values are rejected with
+        `422 VALIDATION_ERROR` ("offset must be >= 0"). An offset past the end of
+        the result set returns an empty `items` array with the true `total`.
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+
+  schemas:
+    Patient:
+      type: object
+      description: |
+        All properties are always present in the JSON payload; unavailable values
+        are serialized as explicit `null` rather than omitted.
+      required:
+      - patient_id
+      - full_name
+      properties:
+        patient_id:
+          type: string
+          description: |
+            Numeric primary key rendered as a plain string â **no `P-` prefix and
+            no trailing `.0`** (the v1.0.0 example `P-10025` was never implemented).
+          example: '10025'
+        full_name:
+          type: string
+          nullable: true
+          description: |
+            Arabic first + father + last name joined with single spaces (blank parts
+            skipped). `null` only if all three are blank.
+          example: Ø£Ø­ÙØ¯ Ø¹ÙÙ Ø­Ø³Ù
+        first_name:
+          type: string
+          nullable: true
+          description: English first name when stored, otherwise the Arabic one.
+          example: Ahmad
+        last_name:
+          type: string
+          nullable: true
+          description: English last name when stored, otherwise the Arabic one.
+          example: Hassan
+        birth_date:
+          type: string
+          format: date
+          nullable: true
+          description: '`yyyy-MM-dd`, or `null` when no birth date is recorded.'
+          example: '1990-01-15'
+        age:
+          type: integer
+          minimum: 0
+          maximum: 150
+          nullable: true
+          description: Exact age computed from `birth_date`; `null` when there is no
+            birth date.
+          example: 36
+        sex:
+          type: string
+          nullable: true
+          description: |
+            Gender code resolved to its display name via the codes service. Falls
+            back to the raw stored code if the codes service cannot name it, and is
+            `null` only when no gender is stored. Not a fixed enum.
+          example: Male
+
+    Doctor:
+      type: object
+      required:
+      - doctor_id
+      - full_name
+      - is_active
+      properties:
+        doctor_id:
+          type: string
+          description: Numeric primary key as a plain string (no `D-` prefix).
+          example: '116'
+        full_name:
+          type: string
+          nullable: true
+          example: Moussa Hakim
+        specialty_id:
+          type: string
+          nullable: true
+          description: The doctor's specialty code (`Doctor.major`); `null` when unset.
+          example: '1.1'
+        specialty_name:
+          type: string
+          nullable: true
+          description: |
+            Display name for `specialty_id`, resolved through the codes service.
+            `null` when the code is unset, has no name, or the codes service is
+            unavailable â resolution failures never fail the request.
+          example: Eyes
+        department_id:
+          type: string
+          nullable: true
+          description: |
+            **Always `null` today.** No department is modelled on the Doctor entity;
+            the field is kept for contract compatibility.
+        department_name:
+          type: string
+          nullable: true
+          description: '**Always `null` today.** Same reason as `department_id`.'
+        is_active:
+          type: boolean
+
+    Worker:
+      type: object
+      required:
+      - employee_id
+      - full_name
+      - is_active
+      properties:
+        employee_id:
+          type: string
+          description: Numeric HR employee id as a plain string (no `E-` prefix).
+          example: '205'
+        full_name:
+          type: string
+          nullable: true
+          example: Hassan Ibrahim
+        job_id:
+          type: string
+          nullable: true
+          description: Id of the employee's "basic" job characterization in HR; `null`
+            when they have none.
+          example: '12'
+        job_title:
+          type: string
+          nullable: true
+          description: Resolved title for the job characterization code; `null` when
+            unresolvable.
+          example: Nurse
+        department_id:
+          type: string
+          nullable: true
+          description: Department id taken from HR's employee configuration; `null`
+            when unassigned.
+          example: '3'
+        department_name:
+          type: string
+          nullable: true
+          description: |
+            Department display name, resolved
+            from his-general's Department table for `department_id`.
+          example: ICU
+        section_id:
+          type: string
+          nullable: true
+          description: '**Always `null` today** â not exposed by the HR application yet.'
+        administration_id:
+          type: string
+          nullable: true
+          description: '**Always `null` today** â not exposed by the HR application yet.'
+        is_manager:
+          type: boolean
+          nullable: true
+          description: '**Always `null` today** â not exposed by the HR application yet.'
+        is_active:
+          type: boolean
+          description: |
+            `true` for every row of the `/workers` listing (it queries active
+            employees only) and `true` for any employee returned by
+            `/workers/{employee_id}` (HR exposes no active flag on that call).
+
+    PatientListResponse:
+      allOf:
+      - $ref: '#/components/schemas/ListEnvelope'
+      - type: object
+        properties:
+          items:
+            type: array
+            items:
+              $ref: '#/components/schemas/Patient'
+    DoctorListResponse:
+      allOf:
+      - $ref: '#/components/schemas/ListEnvelope'
+      - type: object
+        properties:
+          items:
+            type: array
+            items:
+              $ref: '#/components/schemas/Doctor'
+    WorkerListResponse:
+      allOf:
+      - $ref: '#/components/schemas/ListEnvelope'
+      - type: object
+        properties:
+          items:
+            type: array
+            items:
+              $ref: '#/components/schemas/Worker'
+
+    ListEnvelope:
+      type: object
+      description: Wrapper returned by every list endpoint.
+      required:
+      - success
+      - items
+      - total
+      - limit
+      - offset
+      properties:
+        success:
+          type: boolean
+          description: |
+            Always `true` â failures are returned as an `Error` body with a non-2xx
+            status, never as a 200 carrying `success: false`.
+          example: true
+        items:
+          type: array
+          items: {}
+        total:
+          type: integer
+          minimum: 0
+          description: Total matches ignoring `limit`/`offset`.
+        limit:
+          type: integer
+          minimum: 1
+          description: The effective limit applied (the resolved default when the
+            caller omitted it).
+        offset:
+          type: integer
+          minimum: 0
+
+    Error:
+      type: object
+      description: |
+        Every non-2xx response uses this shape â including unmatched routes and
+        unexpected exceptions, which are trapped so the API never returns an HTML
+        error page or a stack trace.
+
+        Codes in use:
+          - `UNAUTHORIZED`        (401) missing or invalid `X-API-Key`
+          - `PATIENT_NOT_FOUND`   (404) no such patient, or non-numeric id
+          - `DOCTOR_NOT_FOUND`    (404) no such doctor, or non-numeric id
+          - `WORKER_NOT_FOUND`    (404) no such worker, or non-numeric id
+          - `NOT_FOUND`           (404) unknown route
+          - `VALIDATION_ERROR`    (422) bad/incomplete query parameters
+          - `SERVER_ERROR`        (500) unexpected server error (generic message)
+          - `SERVICE_UNAVAILABLE` (503) HR dependency unreachable or unparseable
+          - `BAD_REQUEST`         (400) defined but not currently produced by any endpoint
+      required:
+      - error
+      - message
+      properties:
+        error:
+          type: string
+          example: PATIENT_NOT_FOUND
+        message:
+          type: string
+          example: The requested patient was not found
+
+    HealthResponse:
+      type: object
+      required:
+      - status
+      properties:
+        status:
+          type: string
+          enum:
+          - healthy
+          - unhealthy
+        service:
+          type: string
+          description: Optional. Always `his-general-directory` in this implementation.
+        api_version:
+          type: string
+          description: Optional. Always `1.0.0` (the API contract version).
+        timestamp:
+          type: string
+          format: date-time
+          description: Optional. ISO-8601 instant at which the probe ran.
+      additionalProperties: true
+
+  responses:
+    BadRequest:
+      description: Malformed request (code `BAD_REQUEST`) â not currently produced.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unauthorized:
+      description: Missing or invalid API key (code `UNAUTHORIZED`)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: UNAUTHORIZED
+            message: Missing or invalid API key
+    NotFound:
+      description: Requested record not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    ValidationError:
+      description: Invalid parameter value (code `VALIDATION_ERROR`)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    ServerError:
+      description: Unexpected server error (code `SERVER_ERROR`; message is generic,
+        details are logged server-side)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    ServiceUnavailable:
+      description: API dependency unavailable (code `SERVICE_UNAVAILABLE`) â the HR
+        application, for `/workers`
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

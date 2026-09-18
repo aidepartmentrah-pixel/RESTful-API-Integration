@@ -44,3 +44,32 @@ def get_patient(db: Session, patient_id: str) -> Patient:
             message="The requested patient was not found",
         )
     return patient
+
+
+def get_father_name_candidates(
+    db: Session,
+    first_name: str | None,
+    last_name: str | None,
+    limit: int,
+) -> list[tuple[str, int]]:
+    if not first_name or not last_name:
+        raise ApiError(
+            status_code=422,
+            error="VALIDATION_ERROR",
+            message="Both 'first_name' and 'last_name' are required",
+        )
+    return patient_repository.get_father_name_candidates(db, first_name, last_name, limit)
+
+
+def get_first_name_candidates(
+    db: Session,
+    last_name: str | None,
+    limit: int,
+) -> list[tuple[str, int]]:
+    if not last_name:
+        raise ApiError(
+            status_code=422,
+            error="VALIDATION_ERROR",
+            message="'last_name' is required",
+        )
+    return patient_repository.get_first_name_candidates(db, last_name, limit)
