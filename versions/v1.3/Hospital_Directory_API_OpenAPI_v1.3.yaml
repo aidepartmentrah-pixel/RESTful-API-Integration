@@ -7,6 +7,8 @@ info:
 
     v1.3 = v1.2 unchanged, plus two PROPOSED endpoints for BCI under
     `/bci-radiology/` (see `../v1.3/requirements/` and `../v1.3/evidence.md`).
+    They are `implemented` in the reference mock only (built and verified
+    there), not accepted by 3iSoft.
 
     This is a PROPOSED next version, authored by the API's consumer (not
     3iSoft) as a formal, testable ask — see `../v1.2/requirements/` for
@@ -53,7 +55,7 @@ tags:
     internally. See requirement 5 for the full rationale.
 
 - name: BCI Radiology
-  x-status: proposed
+  x-status: implemented
   description: |
     PROPOSED, for the BCI clinic platform. Today's registered BCI visits and
     the patient details the clinic needs. The data lives in the radiology
@@ -496,7 +498,7 @@ paths:
     get:
       tags:
       - BCI Radiology
-      x-status: proposed
+      x-status: implemented
       summary: Today's registered BCI visits (for the BCI clinic platform)
       description: |
         PROPOSED. Every BCI visit registered today, as one complete,
@@ -549,7 +551,7 @@ paths:
     get:
       tags:
       - BCI Radiology
-      x-status: proposed
+      x-status: implemented
       summary: One BCI patient by MRN, with the details the clinic needs
       description: |
         PROPOSED. The patient behind an MRN seen in
@@ -944,7 +946,7 @@ components:
 
     BciPersonNames:
       type: object
-      x-status: proposed
+      x-status: implemented
       description: |
         The four name parts as 3iSoft stores them (own, father's, family,
         mother's), in Arabic and, when stored, in English. English parts
@@ -982,7 +984,7 @@ components:
           nullable: true
 
     BciVisit:
-      x-status: proposed
+      x-status: implemented
       allOf:
       - $ref: '#/components/schemas/BciPersonNames'
       - type: object
@@ -1028,7 +1030,7 @@ components:
 
     BciVisitListResponse:
       type: object
-      x-status: proposed
+      x-status: implemented
       required:
       - success
       - items
@@ -1048,7 +1050,7 @@ components:
 
     BciPhone:
       type: object
-      x-status: proposed
+      x-status: implemented
       required:
       - number
       - owner
@@ -1061,7 +1063,7 @@ components:
           description: Whose number it is (the visit card's "owner of the number", a list of 5 options; values to confirm).
 
     BciPatient:
-      x-status: proposed
+      x-status: implemented
       allOf:
       - $ref: '#/components/schemas/BciPersonNames'
       - type: object

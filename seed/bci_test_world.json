@@ -1,0 +1,220 @@
+{
+  "about": "BCI test world. Every person, number, phone and doctor here is INVENTED. Visit times have no date: they mean 'today' in the time zone below.",
+  "version": 1,
+  "timezone": "Asia/Beirut",
+  "patients": [
+    {
+      "person_key": "P01", "mrn": "9999.100001",
+      "name_ar": {"first": "علي", "father": "حسن", "family": "حمدان", "mother": "فاطمة"},
+      "name_en": {"first": "Ali", "father": "Hassan", "family": "Hamdan", "mother": "Fatima"},
+      "birth_date": "1961-03-12", "sex": "Male", "nationality": "Lebanese", "id_number": "TEST-ID-0001", "has_allergy": false,
+      "phones": [{"number": "00-000-001", "owner": "self"}, {"number": "00-000-002", "owner": "son"}],
+      "images": [{"modality": "US", "description": "Echocardiogram (invented)"}],
+      "visits_today": [{"visit_id": "V9999-0001", "time": "08:30", "kind": "scheduled", "doctor": "Dr. Test-A", "status": "registered"}],
+      "note": "baseline"
+    },
+    {
+      "person_key": "P02", "mrn": "9999.100002",
+      "name_ar": {"first": "مريم", "father": "خليل", "family": "نصار", "mother": "سعاد"},
+      "name_en": {"first": "Maryam", "father": "Khalil", "family": "Nassar", "mother": "Souad"},
+      "birth_date": "1975-07-02", "sex": "Female", "nationality": "Lebanese", "id_number": null, "has_allergy": true,
+      "phones": [{"number": "00-000-003", "owner": "self"}],
+      "images": [{"modality": "XA", "description": "Coronary angiography (invented)"}],
+      "visits_today": [{"visit_id": "V9999-0002", "time": "09:10", "kind": "walk_in", "doctor": "Dr. Test-B", "status": "registered"}],
+      "note": "allergy flag set; walk-in"
+    },
+    {
+      "person_key": "P03", "mrn": "9999.100003",
+      "name_ar": {"first": "يوسف", "father": "أحمد", "family": "الحسيني", "mother": "منى"},
+      "name_en": {"first": "Youssef", "father": "Ahmad", "family": "Al-Husseini", "mother": "Mona"},
+      "birth_date": "1958-11-20", "sex": "Male", "nationality": "Lebanese", "id_number": "TEST-ID-0003", "has_allergy": false,
+      "phones": [{"number": "00-000-004", "owner": "self"}],
+      "images": [{"modality": "US", "description": "Echocardiogram (invented)"}],
+      "visits_today": [],
+      "note": "two MRNs, first record (older number, images, no visit today)"
+    },
+    {
+      "person_key": "P03", "mrn": "9999.100103",
+      "name_ar": {"first": "يوسف", "father": "أحمد", "family": "الحسينى", "mother": "منى"},
+      "name_en": {"first": "Youssef", "father": "Ahmad", "family": "El-Husseini", "mother": "Mona"},
+      "birth_date": "1958-11-20", "sex": "Male", "nationality": "Lebanese", "id_number": null, "has_allergy": false,
+      "phones": [{"number": "00-000-005", "owner": "wife"}],
+      "images": [{"modality": "XA", "description": "Coronary angiography (invented)"}],
+      "visits_today": [{"visit_id": "V9999-0003", "time": "10:00", "kind": "scheduled", "doctor": "Dr. Test-A", "status": "registered"}],
+      "note": "two MRNs, second record: family name spelled with final ى instead of ي; same birth date"
+    },
+    {
+      "person_key": "P04", "mrn": "9999.100004",
+      "name_ar": {"first": "زينب", "father": "علي", "family": "مرعي", "mother": "خديجة"},
+      "name_en": null,
+      "birth_date": "1983-05-14", "sex": "Female", "nationality": "Lebanese", "id_number": null, "has_allergy": false,
+      "phones": [{"number": "00-000-006", "owner": "husband"}],
+      "images": [{"modality": "CR", "description": "Chest X-ray (invented)"}],
+      "visits_today": [{"visit_id": "V9999-0004", "time": "09:45", "kind": "walk_in", "doctor": "Dr. Test-C", "status": "registered"}],
+      "note": "Arabic-only name (no English)"
+    },
+    {
+      "person_key": "P05", "mrn": "9999.100005",
+      "name_ar": {"first": "نادر", "father": "سليم", "family": "طعمة", "mother": "ليلى"},
+      "name_en": {"first": "Nader", "father": "Salim", "family": "Toumeh", "mother": "Layla"},
+      "birth_date": "1969-09-01", "sex": "Male", "nationality": "Lebanese", "id_number": "TEST-ID-0005", "has_allergy": false,
+      "phones": [{"number": "00-000-007", "owner": "self"}],
+      "images": [],
+      "visits_today": [{"visit_id": "V9999-0005", "time": "11:00", "kind": "scheduled", "doctor": "Dr. Test-B", "status": "registered"}],
+      "note": "no images anywhere"
+    },
+    {
+      "person_key": "P06", "mrn": "9999.100006",
+      "name_ar": {"first": "حسين", "father": "عباس", "family": "شريف", "mother": "زهراء"},
+      "name_en": {"first": "Hussein", "father": "Abbas", "family": "Sharif", "mother": "Zahraa"},
+      "birth_date": null, "sex": "Male", "nationality": "Lebanese", "id_number": null, "has_allergy": false,
+      "phones": [{"number": "00-000-008", "owner": "daughter"}],
+      "images": [{"modality": "CT", "description": "Cardiac CT (invented)"}],
+      "visits_today": [{"visit_id": "V9999-0006", "time": "10:20", "kind": "walk_in", "doctor": "Dr. Test-C", "status": "registered"}],
+      "note": "missing birth date"
+    },
+    {
+      "person_key": "P07", "mrn": "9999.100007",
+      "name_ar": {"first": "عمار", "father": "كاظم", "family": "الجبوري", "mother": "أمل"},
+      "name_en": {"first": "Ammar", "father": "Kazem", "family": "Al-Jubouri", "mother": "Amal"},
+      "birth_date": "1972-01-25", "sex": "Male", "nationality": "Iraqi", "id_number": "TEST-ID-0007", "has_allergy": false,
+      "phones": [{"number": "00-000-009", "owner": "self"}, {"number": "00-000-010", "owner": "brother"}],
+      "images": [{"modality": "XA", "description": "Coronary angiography (invented)"}],
+      "visits_today": [{"visit_id": "V9999-0007", "time": "08:00", "kind": "scheduled", "doctor": "Dr. Test-A", "status": "registered"}],
+      "note": "international patient (Iraqi), first visit of the day"
+    },
+    {
+      "person_key": "P08", "mrn": "9999.100008",
+      "name_ar": {"first": "رهف", "father": "مازن", "family": "الحلبي", "mother": "هالة"},
+      "name_en": {"first": "Rahaf", "father": "Mazen", "family": "Al-Halabi", "mother": "Hala"},
+      "birth_date": "1990-12-08", "sex": "Female", "nationality": "Syrian", "id_number": "TEST-ID-0008", "has_allergy": false,
+      "phones": [{"number": "00-000-011", "owner": "self"}],
+      "images": [{"modality": "US", "description": "Echocardiogram (invented)"}],
+      "visits_today": [{"visit_id": "V9999-0008", "time": "12:15", "kind": "walk_in", "doctor": "Dr. Test-B", "status": "registered"}],
+      "note": "international patient (Syrian)"
+    },
+    {
+      "person_key": "P09", "mrn": "9999.100009",
+      "name_ar": {"first": "كريم", "father": "جورج", "family": "عازار", "mother": "نهى"},
+      "name_en": {"first": "Karim", "father": "Georges", "family": "Azar", "mother": "Noha"},
+      "birth_date": "1966-04-17", "sex": "Male", "nationality": "Lebanese", "id_number": null, "has_allergy": false,
+      "phones": [{"number": "00-000-012", "owner": "self"}],
+      "images": [{"modality": "US", "description": "Echocardiogram (invented)"}],
+      "visits_today": [{"visit_id": "V9999-0009", "time": "09:30", "kind": "scheduled", "doctor": "Dr. Test-C", "status": "frozen"}],
+      "note": "the one frozen visit"
+    },
+    {
+      "person_key": "P10", "mrn": "9999.100010",
+      "name_ar": {"first": "سلمى", "father": "فؤاد", "family": "بزي", "mother": "وداد"},
+      "name_en": {"first": "Salma", "father": "Fouad", "family": "Bazzi", "mother": "Wedad"},
+      "birth_date": "1980-06-30", "sex": "Female", "nationality": "Lebanese", "id_number": "TEST-ID-0010", "has_allergy": false,
+      "phones": [{"number": "00-000-013", "owner": "self"}],
+      "images": [{"modality": "CR", "description": "Chest X-ray (invented)"}],
+      "visits_today": [],
+      "note": "no visit today"
+    },
+    {
+      "person_key": "P11", "mrn": "9999.100011",
+      "name_ar": {"first": "طوني", "father": "إلياس", "family": "حداد", "mother": "جورجيت"},
+      "name_en": {"first": "Tony", "father": "Elias", "family": "Haddad", "mother": "Georgette"},
+      "birth_date": "1955-02-09", "sex": "Male", "nationality": "Lebanese", "id_number": null, "has_allergy": true,
+      "phones": [{"number": "00-000-014", "owner": "son"}, {"number": "00-000-015", "owner": "daughter"}],
+      "images": [{"modality": "XA", "description": "Coronary angiography (invented)"}, {"modality": "US", "description": "Echocardiogram (invented)"}],
+      "visits_today": [{"visit_id": "V9999-0010", "time": "10:40", "kind": "scheduled", "doctor": "Dr. Test-A", "status": "registered"}],
+      "note": "allergy flag set; two studies"
+    },
+    {
+      "person_key": "P12", "mrn": "9999.100012",
+      "name_ar": {"first": "نور", "father": "رامي", "family": "فرحات", "mother": "رنا"},
+      "name_en": {"first": "Nour", "father": "Rami", "family": "Farhat", "mother": "Rana"},
+      "birth_date": "2019-08-22", "sex": "Female", "nationality": "Lebanese", "id_number": null, "has_allergy": false,
+      "phones": [{"number": "00-000-016", "owner": "mother"}, {"number": "00-000-017", "owner": "father"}],
+      "images": [{"modality": "US", "description": "Pediatric echocardiogram (invented)"}],
+      "visits_today": [{"visit_id": "V9999-0011", "time": "11:30", "kind": "scheduled", "doctor": "Dr. Test-D", "status": "registered"}],
+      "note": "child; phones belong to the parents"
+    },
+    {
+      "person_key": "P13", "mrn": "9999.100013",
+      "name_ar": {"first": "سامي", "father": "نبيل", "family": "قبلان", "mother": "سميرة"},
+      "name_en": {"first": "Sami", "father": "Nabil", "family": "Kabalan", "mother": "Samira"},
+      "birth_date": "1963-10-03", "sex": "Male", "nationality": "Lebanese", "id_number": "TEST-ID-0013", "has_allergy": false,
+      "phones": [{"number": "00-000-018", "owner": "self"}],
+      "images": [{"modality": "US", "description": "Echocardiogram (invented)"}],
+      "visits_today": [
+        {"visit_id": "V9999-0012", "time": "08:15", "kind": "scheduled", "doctor": "Dr. Test-B", "status": "registered"},
+        {"visit_id": "V9999-0013", "time": "13:00", "kind": "walk_in", "doctor": "Dr. Test-A", "status": "registered"}
+      ],
+      "note": "two visits today"
+    },
+    {
+      "person_key": "P14", "mrn": "9999.100014",
+      "name_ar": {"first": "ليال", "father": "وسيم", "family": "شمص", "mother": "إيمان"},
+      "name_en": {"first": "Layal", "father": "Wassim", "family": "Chamas", "mother": "Iman"},
+      "birth_date": "1987-03-27", "sex": "Female", "nationality": "Lebanese", "id_number": null, "has_allergy": false,
+      "phones": [{"number": "00-000-019", "owner": "self"}],
+      "images": [{"modality": "MR", "description": "Cardiac MRI (invented)"}],
+      "visits_today": [{"visit_id": "V9999-0014", "time": "12:00", "kind": "scheduled", "doctor": "Dr. Test-D", "status": "registered"}],
+      "note": "baseline"
+    },
+    {
+      "person_key": "P15", "mrn": "9999.100015",
+      "name_ar": {"first": "محمود", "father": "يوسف", "family": "دياب", "mother": "عفاف"},
+      "name_en": {"first": "Mahmoud", "father": "Youssef", "family": "Diab", "mother": "Afaf"},
+      "birth_date": "1950-12-31", "sex": "Male", "nationality": "Palestinian", "id_number": "TEST-ID-0015", "has_allergy": false,
+      "phones": [{"number": "00-000-020", "owner": "son"}],
+      "images": [{"modality": "XA", "description": "Coronary angiography (invented)"}],
+      "visits_today": [{"visit_id": "V9999-0015", "time": "13:30", "kind": "walk_in", "doctor": "Dr. Test-C", "status": "registered"}],
+      "note": "oldest patient; phone belongs to the son"
+    },
+    {
+      "person_key": "P16", "mrn": "9999.100016",
+      "name_ar": {"first": "هبة", "father": "عماد", "family": "السيد", "mother": "نجوى"},
+      "name_en": {"first": "Hiba", "father": "Imad", "family": "El-Sayed", "mother": "Najwa"},
+      "birth_date": "1994-01-01", "sex": "Female", "nationality": "Lebanese", "id_number": null, "has_allergy": false,
+      "phones": [{"number": "00-000-021", "owner": "self"}],
+      "images": [{"modality": "US", "description": "Echocardiogram (invented)"}],
+      "visits_today": [{"visit_id": "V9999-0016", "time": "14:00", "kind": "scheduled", "doctor": "Dr. Test-B", "status": "registered"}],
+      "note": "baseline"
+    },
+    {
+      "person_key": "P17", "mrn": "9999.100017",
+      "name_ar": {"first": "جاد", "father": "ميشال", "family": "صليبا", "mother": "ريتا"},
+      "name_en": {"first": "Jad", "father": "Michel", "family": "Saliba", "mother": "Rita"},
+      "birth_date": "1978-08-15", "sex": "Male", "nationality": "Lebanese", "id_number": "TEST-ID-0017", "has_allergy": false,
+      "phones": [{"number": "00-000-022", "owner": "self"}],
+      "images": [{"modality": "CT", "description": "Cardiac CT (invented)"}],
+      "visits_today": [{"visit_id": "V9999-0017", "time": "14:30", "kind": "walk_in", "doctor": "Dr. Test-D", "status": "registered"}],
+      "note": "baseline"
+    },
+    {
+      "person_key": "P18", "mrn": "9999.100018",
+      "name_ar": {"first": "فرح", "father": "باسل", "family": "الأمين", "mother": "لينا"},
+      "name_en": {"first": "Farah", "father": "Bassel", "family": "Al-Amine", "mother": "Lina"},
+      "birth_date": "2001-05-05", "sex": "Female", "nationality": "Jordanian", "id_number": "TEST-ID-0018", "has_allergy": true,
+      "phones": [{"number": "00-000-023", "owner": "self"}, {"number": "00-000-024", "owner": "father"}],
+      "images": [{"modality": "US", "description": "Echocardiogram (invented)"}],
+      "visits_today": [{"visit_id": "V9999-0018", "time": "15:00", "kind": "scheduled", "doctor": "Dr. Test-A", "status": "registered"}],
+      "note": "international patient (Jordanian); allergy flag set"
+    },
+    {
+      "person_key": "P19", "mrn": "9999.100019",
+      "name_ar": {"first": "ربيع", "father": "منير", "family": "عون", "mother": "ماري"},
+      "name_en": {"first": "Rabih", "father": "Mounir", "family": "Aoun", "mother": "Marie"},
+      "birth_date": "1968-07-19", "sex": "Male", "nationality": "Lebanese", "id_number": null, "has_allergy": false,
+      "phones": [{"number": "00-000-025", "owner": "wife"}],
+      "images": [{"modality": "XA", "description": "Coronary angiography (invented)"}],
+      "visits_today": [{"visit_id": "V9999-0019", "time": "15:45", "kind": "walk_in", "doctor": "Dr. Test-C", "status": "registered"}],
+      "note": "last visit of the day"
+    },
+    {
+      "person_key": "P20", "mrn": "9999.100020",
+      "name_ar": {"first": "دانة", "father": "طارق", "family": "منصور", "mother": "سلوى"},
+      "name_en": {"first": "Dana", "father": "Tarek", "family": "Mansour", "mother": "Salwa"},
+      "birth_date": "1999-11-11", "sex": "Female", "nationality": "Lebanese", "id_number": "TEST-ID-0020", "has_allergy": false,
+      "phones": [{"number": "00-000-026", "owner": "self"}],
+      "images": [{"modality": "CR", "description": "Chest X-ray (invented)"}],
+      "visits_today": [{"visit_id": "V9999-0020", "time": "11:15", "kind": "scheduled", "doctor": "Dr. Test-D", "status": "registered"}],
+      "note": "baseline"
+    }
+  ]
+}

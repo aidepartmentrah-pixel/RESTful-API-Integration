@@ -25,4 +25,7 @@ alembic upgrade head
 echo "Seeding development data..."
 python -m seed.seed_data
 
+echo "Seeding BCI test world (v1.3, invented 9999.* rows only)..."
+python -m seed.seed_bci_test_world
+
 echo "Database initialization complete."

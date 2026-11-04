@@ -1,7 +1,7 @@
 # Evidence behind v1.3
 
 None of v1.3 has real-server evidence. Both additions are **MOCK_ONLY**:
-proposals, implemented (once built) in this mock only. "Implemented"
+proposals, implemented in this mock only. "Implemented"
 never means 3iSoft agreed or that the real system behaves this way.
 
 **What evidence exists:** the *field names* (labels, column headers, list
@@ -38,6 +38,8 @@ can hold session cookies). The BCI project keeps the structure notes
 ## Acceptance tests
 
 `acceptance_tests/verify_v1.3_contract.ps1` reports each addition on its
-own line: `PASS`, `FAIL` or `NOT-YET-IMPLEMENTED`. Until the mock is
-built (BCI slice 0.9), both lines read `NOT-YET-IMPLEMENTED`; that is the
-expected state, not a bug.
+own line: `PASS`, `FAIL` or `NOT-YET-IMPLEMENTED`. Both lines read `PASS` against the
+v1.3-dev mock (`localhost:6002`), checked against the BCI test world
+(`seed/bci_test_world.json`), with an opt-in `-CheckSourceDown` run that
+proves `503` when the database is stopped. That proves the mock matches
+the spec, nothing about the real system.
