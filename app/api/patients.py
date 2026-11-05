@@ -7,8 +7,6 @@ from app.core.security import require_api_key
 from app.schemas.patient import (
     FatherNameCandidate,
     FatherNameCandidatesResponse,
-    FirstNameCandidate,
-    FirstNameCandidatesResponse,
     Patient,
     PatientListResponse,
 )
@@ -52,7 +50,9 @@ def get_father_name_candidates(
     last_name: Annotated[str | None, Query(min_length=1)] = None,
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
 ) -> FatherNameCandidatesResponse:
-    candidates = patient_service.get_father_name_candidates(db, first_name, last_name, limit)
+    candidates, total = patient_service.get_father_name_candidates(
+        db, first_name, last_name, limit
+    )
     return FatherNameCandidatesResponse(
         first_name=first_name or "",
         last_name=last_name or "",
@@ -60,25 +60,7 @@ def get_father_name_candidates(
             FatherNameCandidate(father_name=father_name, patient_count=count)
             for father_name, count in candidates
         ],
-        total_candidates=len(candidates),
-    )
-
-
-# Registered before /{patient_id} for the same reason as /father-names above.
-@router.get("/first-names", response_model=FirstNameCandidatesResponse)
-def get_first_name_candidates(
-    db: DbSession,
-    last_name: Annotated[str | None, Query(min_length=1)] = None,
-    limit: Annotated[int, Query(ge=1, le=200)] = 50,
-) -> FirstNameCandidatesResponse:
-    candidates = patient_service.get_first_name_candidates(db, last_name, limit)
-    return FirstNameCandidatesResponse(
-        last_name=last_name or "",
-        candidates=[
-            FirstNameCandidate(first_name=first_name, patient_count=count)
-            for first_name, count in candidates
-        ],
-        total_candidates=len(candidates),
+        total_candidates=total,
     )
 
 

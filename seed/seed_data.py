@@ -134,8 +134,6 @@ def seed_patients(db) -> None:
         # OpenAPI v1.1: sex is a display name resolved via a codes service,
         # not a fixed 1-char code.
         sex = random.choice(["Male", "Female"]) if random.random() < 0.95 else None
-        # v1.2 proposed field -- see requirements/4-patient-encounter-type.
-        encounter_type = random.choice(["inpatient", "outpatient", None])
 
         db.add(
             Patient(
@@ -143,7 +141,6 @@ def seed_patients(db) -> None:
                 birth_date=birth_date,
                 age=age,
                 sex=sex,
-                encounter_type=encounter_type,
                 **names,
             )
         )

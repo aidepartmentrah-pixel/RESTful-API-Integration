@@ -13,7 +13,6 @@ class Patient(BaseModel):
     birth_date: date | None = None
     age: int | None = None
     sex: str | None = None
-    encounter_type: str | None = None
 
 
 class PatientListResponse(BaseModel):
@@ -38,19 +37,7 @@ class FatherNameCandidatesResponse(BaseModel):
     first_name: str
     last_name: str
     candidates: list[FatherNameCandidate]
+    # Distinct matches before `limit` is applied, so a caller can show
+    # "showing 50 of 120".
     total_candidates: int
 
-
-class FirstNameCandidate(BaseModel):
-    first_name: str
-    patient_count: int
-
-
-class FirstNameCandidatesResponse(BaseModel):
-    """See versions/v1.2/requirements/2-first-name-candidates/requirement.md
-    for the rationale; symmetrical companion to FatherNameCandidatesResponse."""
-
-    success: bool = True
-    last_name: str
-    candidates: list[FirstNameCandidate]
-    total_candidates: int

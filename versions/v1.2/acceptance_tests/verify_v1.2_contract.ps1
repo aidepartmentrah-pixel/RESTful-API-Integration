@@ -8,7 +8,7 @@ param(
 
 # Hard pass/fail regression suite for the v1.2 mock. Runs the FULL v1.1
 # suite first (v1.2 must be a strict superset - no regressions), then
-# checks each of the 5 proposed v1.2 additions individually. Each addition
+# checks each of the 3 proposed v1.2 additions individually. Each addition
 # reports one of three states, not just pass/fail:
 #   PASS                - implemented and behaves per the v1.2 spec
 #   FAIL                - implemented but wrong (a real bug)
@@ -189,7 +189,7 @@ Assert-Check "GET /doctors with no key -> 401" ($r.StatusCode -eq 401) "(got $($
 Assert-Check "  error == UNAUTHORIZED" ($r.Body.error -eq "UNAUTHORIZED") "(got $($r.Body.error))"
 
 Write-Host ""
-Write-Host "=== Part 2: the 5 proposed v1.2 additions ===" -ForegroundColor Cyan
+Write-Host "=== Part 2: the 3 proposed v1.2 additions ===" -ForegroundColor Cyan
 Write-Host ""
 
 # --- 1. father-names (implemented) ---
@@ -202,17 +202,7 @@ if ($r.StatusCode -eq 404) {
     Report-Feature "father-names" "FAIL" "(status=$($r.StatusCode), fields: $($r.Body.PSObject.Properties.Name -join ', '))"
 }
 
-# --- 2. first-names (proposed) ---
-$r = Invoke-DirectoryApi -Path "/patients/first-names?last_name=$([uri]::EscapeDataString($PatientLastName))" -WithAuth
-if ($r.StatusCode -eq 404) {
-    Report-Feature "first-names" "NOT-YET-IMPLEMENTED"
-} elseif ($r.StatusCode -eq 200 -and $r.Body -and (Test-FieldSet $r.Body @("success","last_name","candidates","total_candidates"))) {
-    Report-Feature "first-names" "PASS" "candidates=$($r.Body.total_candidates)"
-} else {
-    Report-Feature "first-names" "FAIL" "(status=$($r.StatusCode), fields: $($r.Body.PSObject.Properties.Name -join ', '))"
-}
-
-# --- 3. worker section_name / administration_name (proposed) ---
+# --- 2. worker section_name / administration_name (proposed) ---
 if ($FirstWorker -and ($FirstWorker.PSObject.Properties.Name -notcontains "section_name")) {
     Report-Feature "worker-section-admin" "NOT-YET-IMPLEMENTED"
 } elseif ($FirstWorker -and (Test-FieldSet $FirstWorker @("employee_id","full_name","job_id","job_title","department_id","department_name","section_id","section_name","administration_id","administration_name","is_manager","is_active"))) {
@@ -222,17 +212,7 @@ if ($FirstWorker -and ($FirstWorker.PSObject.Properties.Name -notcontains "secti
     Report-Feature "worker-section-admin" "FAIL" "(fields: $Fields)"
 }
 
-# --- 4. patient encounter_type (proposed) ---
-if ($FirstPatient -and ($FirstPatient.PSObject.Properties.Name -notcontains "encounter_type")) {
-    Report-Feature "patient-encounter-type" "NOT-YET-IMPLEMENTED"
-} elseif ($FirstPatient -and (Test-FieldSet $FirstPatient @("patient_id","full_name","first_name","last_name","birth_date","age","sex","encounter_type"))) {
-    Report-Feature "patient-encounter-type" "PASS" "encounter_type=$($FirstPatient.encounter_type)"
-} else {
-    $Fields = if ($FirstPatient) { $FirstPatient.PSObject.Properties.Name -join ', ' } else { "(no patient in seed data)" }
-    Report-Feature "patient-encounter-type" "FAIL" "(fields: $Fields)"
-}
-
-# --- 5. GET /er/current-visits (proposed) ---
+# --- 3. GET /er/current-visits (proposed) ---
 $r = Invoke-DirectoryApi -Path "/er/current-visits" -WithAuth
 if ($r.StatusCode -eq 404) {
     Report-Feature "er-current-visits" "NOT-YET-IMPLEMENTED"

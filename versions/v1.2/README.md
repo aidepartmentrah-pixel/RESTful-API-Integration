@@ -6,7 +6,7 @@ version being built out and tested in this repo before being handed to
 commitment from the vendor — it's an accountable request, with the tests
 to prove each piece works before anyone is asked to build it for real.
 
-- Spec: `Hospital_Directory_API_OpenAPI_v1.2.yaml` — v1.1 plus 5
+- Spec: `Hospital_Directory_API_OpenAPI_v1.2.yaml` — v1.1 plus 3
   additions, each tagged `x-status: implemented` or `x-status: proposed`.
 - Requirement docs (rationale, format decisions, open questions) for each
   addition: `requirements/<n>-<slug>/requirement.md`.
@@ -15,9 +15,9 @@ to prove each piece works before anyone is asked to build it for real.
   real-server evidence at all.
 - Acceptance test: `acceptance_tests/verify_v1.2_contract.ps1`.
 
-## The 5 additions
+## The 3 additions
 
-All 5 are now implemented in this mock (Period D) — "implemented" means
+All 3 are implemented in this mock (Period D) — "implemented" means
 built and verified here, **not** accepted by 3iSoft. Nothing below is a
 vendor commitment; see `evidence.md` for what is/isn't backed by
 real-server testing, which is a separate question from what's built here.
@@ -25,19 +25,29 @@ real-server testing, which is a separate question from what's built here.
 | # | Addition | Consumer | Status (this mock) |
 |---|---|---|---|
 | 1 | `GET /patients/father-names` | HCAT | Implemented (mock) |
-| 2 | `GET /patients/first-names` | HCAT | Implemented (mock) |
-| 3 | `Worker.section_name` / `administration_name` | HCAT | Implemented (mock) |
-| 4 | `Patient.encounter_type` | HCAT | Implemented (mock) |
-| 5 | `GET /er/current-visits` | HCopilot | Implemented (mock) |
+| 2 | `Worker.section_name` / `administration_name` | HCAT | Implemented (mock) |
+| 3 | `GET /er/current-visits` | HCopilot | Implemented (mock) |
+
+Requirement folders keep their original numbers (`1-`, `3-`, `5-`) so
+existing links don't break.
+
+## Dropped (meeting, 4 Nov 2026)
+
+| Was | Item | Why dropped |
+|---|---|---|
+| #2 | `GET /patients/first-names` (family-name-only search) | A family name can match hundreds of first names — too broad to be a useful narrowing step. |
+| #4 | `Patient.encounter_type` (inpatient/outpatient) | The source system does not record it, so the vendor cannot supply it. |
+
+Both were removed from the spec, the mock (migration `0007` drops the
+column), the tests and the acceptance scripts.
+`tests/test_v1_2_dropped_items.py` fails if either reappears.
 
 ## Traceability matrix
 
 | Requirement | Unit test(s) | Acceptance-test check | Status |
 |---|---|---|---|
 | `requirements/1-father-name-candidates/` | `tests/test_father_names.py` | `father-names` line in `verify_v1.2_contract.ps1` | Implemented (mock), verified |
-| `requirements/2-first-name-candidates/` | `tests/test_first_names.py` | `first-names` line | Implemented (mock), verified |
 | `requirements/3-worker-section-administration-names/` | `tests/test_worker_section_administration_names.py` | `worker-section-admin` line | Implemented (mock), verified |
-| `requirements/4-patient-encounter-type/` | `tests/test_patient_encounter_type.py` | `patient-encounter-type` line | Implemented (mock), verified |
 | `requirements/5-er-current-visits-hcopilot/` | `tests/test_er_current_visits.py` | `er-current-visits` line | Implemented (mock), verified |
 
 This table is the single source of truth for "is X actually done" — kept
