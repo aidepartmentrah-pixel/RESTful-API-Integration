@@ -33,12 +33,12 @@ Kept in sync by hand with the `x-status` markers in the YAML.
 
 v1.1 (`localhost:6000`, project `mock-v11`) and v1.2-dev
 (`localhost:6001`, project `mock-v12-dev`) are not touched. v1.3 is
-developed in its own worktree (`RESTful-API-Integration-v1.3`, branch
-`v1.3-bci-radiology`) and runs as **v1.3-dev on `localhost:6002`**,
+developed in its own worktree (`RESTful-API-Integration-versions1.3`,
+branch `v1.3-bci-radiology`) and runs as **v1.3-dev on `localhost:6002`**,
 Docker Compose project `mock-v13-dev`, with its own Postgres port.
 
-v1.3 starts from the **committed** v1.2 (`ea21d11`, all 5 v1.2 additions).
-Uncommitted v1.2 work in the main checkout is not included.
+v1.3 includes v1.2 as of `dc42452`: the 3 v1.2 additions kept after the
+4 Nov 2026 meeting (`first-names` and `encounter_type` were dropped).
 
 ## Test data
 
@@ -47,12 +47,18 @@ only, MRNs `9999.NNNNNN`, visit numbers `V9999-NNNN`, phones
 `00-000-0NN`, doctors `Dr. Test-X`. Visit times are "today" relative to
 the day the mock is asked.
 
-## Rebasing onto v1.2's work in progress
+## Merged v1.2 scope cut (5 Nov 2026)
 
-v1.3 is built on the committed v1.2. When the v1.2 changes in progress
-(dropping `first-names` and `encounter_type`, decided at the meeting of
-4 Nov) are committed, v1.3 is rebased onto them. The uncommitted v1.2 work
-is not followed now.
+The v1.2 scope cut was merged into this branch. Two consequences:
+
+- **Migration renumbered.** v1.2's `0007` drops `patients.encounter_type`;
+  the BCI tables migration became `0008` (revises `0007`), so the chain is
+  `0001 .. 0008` with one head. The existing v1.3-dev database was
+  aligned by hand (column dropped, `alembic_version` set to `0008`); the
+  BCI test data was kept.
+- **Spec cleaned.** `/patients/first-names` and `Patient.encounter_type`
+  are gone from the v1.3 spec too, and `father-names` carries the agreed
+  rules (ties ordered, `total_candidates` counted before `limit`).
 
 ## Running and testing
 
@@ -72,9 +78,8 @@ the two are identical. The data is in its own tables (`bci_patients`,
 `bci_visits`), not in `patients`. Visit times are stored as clock times
 and dated "today" (Asia/Beirut) when the API answers.
 
-## Known issue (not ours)
+## Arabic examples
 
-The v1.2 spec's `/er/current-visits` example shows its Arabic names as
-mojibake (`Ø¹Ø¨Ø§Ø³`, UTF-8 read as Latin-1). It is left as it is in v1.2 and
-carried over unchanged into the v1.3 file. The v1.3 BCI examples are
-correct UTF-8.
+The `/er/current-visits` and `father-names` examples inherited from v1.2
+used to show mojibake (`Ø¹Ø¨Ø§Ø³`, UTF-8 read as Latin-1). They were
+repaired in both the v1.2 and v1.3 spec files; all examples are UTF-8.
