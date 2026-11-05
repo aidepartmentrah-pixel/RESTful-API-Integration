@@ -1,7 +1,7 @@
 #!/bin/sh
 # Bash/curl port of verify_v1.2_contract.ps1, for Debian/air-gapped hosts
 # without PowerShell. Same checks, same two parts (full v1.1 suite, then
-# the 5 proposed v1.2 additions reported PASS / FAIL / NOT-YET-IMPLEMENTED),
+# the 3 proposed v1.2 additions reported PASS / FAIL / NOT-YET-IMPLEMENTED),
 # same exit-code contract (0 only if $FAIL_COUNT is 0 — NOT-YET-IMPLEMENTED
 # never counts as a failure).
 #
@@ -200,7 +200,7 @@ ERR="$(echo "$BODY" | jq -r '.error // empty')"
 check "  error == UNAUTHORIZED" $([ "$ERR" = "UNAUTHORIZED" ] && echo 1 || echo 0) "(got $ERR)"
 
 echo ""
-echo "=== Part 2: the 5 proposed v1.2 additions ==="
+echo "=== Part 2: the 3 proposed v1.2 additions ==="
 echo ""
 
 # --- 1. father-names (implemented) ---
@@ -215,19 +215,7 @@ else
     report_feature "father-names" "FAIL" "(status=$STATUS)"
 fi
 
-# --- 2. first-names (proposed) ---
-api_get "/patients/first-names?last_name=$LN" auth
-BODY="$(cat "$BODY_FILE")"
-if [ "$STATUS" = "404" ]; then
-    report_feature "first-names" "NOT-YET-IMPLEMENTED"
-elif [ "$STATUS" = "200" ] && [ "$(field_set_matches "$BODY" "success last_name candidates total_candidates")" = "1" ]; then
-    TOTAL_CAND="$(echo "$BODY" | jq -r '.total_candidates')"
-    report_feature "first-names" "PASS" "candidates=$TOTAL_CAND"
-else
-    report_feature "first-names" "FAIL" "(status=$STATUS)"
-fi
-
-# --- 3. worker section_name / administration_name (proposed) ---
+# --- 2. worker section_name / administration_name (proposed) ---
 if [ -n "$FIRST_WORKER" ] && [ "$FIRST_WORKER" != "null" ]; then
     HAS_SECTION_NAME="$(echo "$FIRST_WORKER" | jq 'has("section_name")')"
     if [ "$HAS_SECTION_NAME" = "false" ]; then
@@ -241,22 +229,7 @@ else
     report_feature "worker-section-admin" "FAIL" "(no worker in seed data)"
 fi
 
-# --- 4. patient encounter_type (proposed) ---
-if [ -n "$FIRST_PATIENT" ] && [ "$FIRST_PATIENT" != "null" ]; then
-    HAS_ENCOUNTER_TYPE="$(echo "$FIRST_PATIENT" | jq 'has("encounter_type")')"
-    if [ "$HAS_ENCOUNTER_TYPE" = "false" ]; then
-        report_feature "patient-encounter-type" "NOT-YET-IMPLEMENTED"
-    elif [ "$(field_set_matches "$FIRST_PATIENT" "patient_id full_name first_name last_name birth_date age sex encounter_type")" = "1" ]; then
-        ENC_TYPE="$(echo "$FIRST_PATIENT" | jq -r '.encounter_type')"
-        report_feature "patient-encounter-type" "PASS" "encounter_type=$ENC_TYPE"
-    else
-        report_feature "patient-encounter-type" "FAIL" "(fields: $(echo "$FIRST_PATIENT" | jq -r 'keys | join(", ")'))"
-    fi
-else
-    report_feature "patient-encounter-type" "FAIL" "(no patient in seed data)"
-fi
-
-# --- 5. GET /er/current-visits (proposed) ---
+# --- 3. GET /er/current-visits (proposed) ---
 api_get "/er/current-visits" auth
 BODY="$(cat "$BODY_FILE")"
 if [ "$STATUS" = "404" ]; then

@@ -1,7 +1,6 @@
 # Proposed addendum to OpenAPI v1.1 — father-name candidate lookup
 
-
-## 2. Proposed endpoint
+## 1. Proposed endpoint
 
 ### `GET /patients/father-names`
 
@@ -14,8 +13,8 @@ blind guesses with one authoritative lookup.
 
 | Parameter | Required | Description |
 |---|---|---|
-| `first_name` | Yes | Case-insensitive substring match, same semantics as `/patients`'s `first_name` (matches the Arabic or English first-name column). |
-| `last_name` | Yes | Case-insensitive substring match, same semantics as `/patients`'s `last_name`. |
+| `first_name` | Yes | Non-blank (whitespace-only is rejected). Case-insensitive substring match, same semantics as `/patients`'s `first_name` (matches the Arabic or English first-name column). |
+| `last_name` | Yes | Non-blank (whitespace-only is rejected). Case-insensitive substring match, same semantics as `/patients`'s `last_name`. |
 | `limit` | No | Max number of distinct father-name candidates to return. Default 50, min 1, max 200. |
 
 Both `first_name` and `last_name` are required — a request missing either
@@ -43,8 +42,10 @@ if missing/invalid.
 ```
 
 - `candidates`: one entry per **distinct** father-name value found among
-  patients matching `first_name` + `last_name`. Ordered by `patient_count`
-  descending (most common first), so a UI can preserve the same
+  patients matching `first_name` + `last_name`; blank father names are
+  excluded. Ordered by `patient_count` descending (most common first),
+  ties ordered alphabetically by `father_name` so the list is stable
+  between calls, so a UI can preserve the same
   "most-likely-first" ordering the old 32-name list was trying to
   approximate — except now it's ordering real data instead of a guess.
 - `father_name`: the display value for that father name (English variant
@@ -55,6 +56,8 @@ if missing/invalid.
   candidate is a single real person or a heavily-duplicated one (e.g. many
   admissions under one identity) — the caller does not need to fetch the
   full record list just to know that.
+- `total_candidates`: the number of distinct candidates **before** `limit`
+  is applied, so a caller can show "showing 50 of 120".
 - No `patient_id` and no individual patient records here by design — this
   is a narrowing/disambiguation step. Once the caller has a confirmed
   `father_name`, it re-queries the existing `GET /patients` with all three

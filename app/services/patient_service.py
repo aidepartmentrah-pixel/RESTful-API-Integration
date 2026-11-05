@@ -51,8 +51,8 @@ def get_father_name_candidates(
     first_name: str | None,
     last_name: str | None,
     limit: int,
-) -> list[tuple[str, int]]:
-    if not first_name or not last_name:
+) -> tuple[list[tuple[str, int]], int]:
+    if not (first_name and first_name.strip()) or not (last_name and last_name.strip()):
         raise ApiError(
             status_code=422,
             error="VALIDATION_ERROR",
@@ -60,16 +60,3 @@ def get_father_name_candidates(
         )
     return patient_repository.get_father_name_candidates(db, first_name, last_name, limit)
 
-
-def get_first_name_candidates(
-    db: Session,
-    last_name: str | None,
-    limit: int,
-) -> list[tuple[str, int]]:
-    if not last_name:
-        raise ApiError(
-            status_code=422,
-            error="VALIDATION_ERROR",
-            message="'last_name' is required",
-        )
-    return patient_repository.get_first_name_candidates(db, last_name, limit)
