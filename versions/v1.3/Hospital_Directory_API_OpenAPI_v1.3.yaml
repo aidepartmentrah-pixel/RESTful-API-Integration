@@ -209,14 +209,15 @@ paths:
       description: |
         Returns the distinct father-name values on file among patients
         matching `first_name` + `last_name`, ordered by how many patient
-        records exist under each (most common first). Replaces a client-side
-        32-candidate guessing loop with one authoritative lookup. Does not
-        return patient records — once a `father_name` is confirmed, call
-        `GET /patients` with all three fields.
+        records exist under each (most common first; ties ordered by
+        `father_name` so the list is stable between calls). Blank father
+        names are excluded. Replaces a client-side 32-candidate guessing
+        loop with one authoritative lookup. Does not return patient records
+        — once a `father_name` is confirmed, call `GET /patients` with all
+        three fields.
 
-        See `requirements/1-father-name-candidates/requirement.md` for the
-        full rationale and format decisions (timezone, encoding, no
-        pagination, etc.).
+        See `../v1.2/requirements/1-father-name-candidates/requirement.md`
+        for the full rationale.
       parameters:
       - name: first_name
         in: query
@@ -224,8 +225,9 @@ paths:
         description: |
           Not enforced as `required` at the schema level (matches the
           `/patients` name parameters' convention in v1.1) — but a request
-          missing this, or `last_name`, is rejected with `422
-          VALIDATION_ERROR` at runtime; both are effectively mandatory.
+          missing or blank (whitespace-only) value for this or `last_name`
+          is rejected with `422 VALIDATION_ERROR` at runtime; both are
+          effectively mandatory.
         schema:
           type: string
           minLength: 1
@@ -245,7 +247,7 @@ paths:
           default: 50
       responses:
         '200':
-          description: Candidate father names, ordered by patient_count descending.
+          description: Candidate father names, ordered by patient_count descending, then father_name.
           content:
             application/json:
               schema:
@@ -264,58 +266,6 @@ paths:
         '500':
           $ref: '#/components/responses/ServerError'
 
-  /patients/first-names:
-    get:
-      tags:
-      - Patients
-      x-status: proposed
-      summary: List candidate first names for a family name
-      description: |
-        PROPOSED — not yet implemented in the mock. Symmetrical companion
-        to `/patients/father-names`, for when only the family name is
-        known. Returns distinct first-name candidates for a `last_name`,
-        with counts. See `requirements/2-first-name-candidates/requirement.md`.
-      parameters:
-      - name: last_name
-        in: query
-        required: false
-        description: |
-          Family name to match against the Arabic or English last-name column
-          only, case-insensitive substring. Not enforced as `required` at the
-          schema level (same convention as `father-names`) — a request
-          missing it is expected to be rejected with `422 VALIDATION_ERROR`
-          at runtime, per `requirements/2-first-name-candidates/requirement.md`.
-        schema:
-          type: string
-          minLength: 1
-      - name: limit
-        in: query
-        required: false
-        schema:
-          type: integer
-          minimum: 1
-          maximum: 200
-          default: 50
-      responses:
-        '200':
-          description: First-name candidates; an empty result is a normal 200.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/FirstNameCandidatesResponse'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '422':
-          description: Missing/blank last_name or an invalid limit.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-              example:
-                error: VALIDATION_ERROR
-                message: "'last_name' is required"
-        '500':
-          $ref: '#/components/responses/ServerError'
 
   /doctors:
     get:
@@ -481,9 +431,9 @@ paths:
                 success: true
                 items:
                 - er_visit_id: '48213'
-                  first_name: Ø¹Ø¨Ø§Ø³
-                  father_name: Ù…Ø­Ù…Ø¯
-                  last_name: Ø²Ù‡Ø±Ø§Ù„Ø¯ÙŠÙ†
+                  first_name: عباس
+                  father_name: محمد
+                  last_name: زهرالدين
                   arrival_time: '2026-09-18T14:32:00+03:00'
                   gender: null
                   age: null
@@ -722,18 +672,6 @@ components:
         sex:
           type: string
           nullable: true
-        encounter_type:
-          type: string
-          nullable: true
-          x-status: proposed
-          description: |
-            PROPOSED, not yet implemented. `"inpatient"` or `"outpatient"`
-            (exact allowed values to be confirmed). Describes this one
-            record — coherent because, per confirmed real-server behavior,
-            `patient_id` is already effectively per-admission, not
-            per-deduplicated-person. See
-            `requirements/4-patient-encounter-type/requirement.md`.
-          example: outpatient
 
     Doctor:
       type: object
@@ -823,7 +761,7 @@ components:
       properties:
         father_name:
           type: string
-          example: 'Ù…Ø­Ù…Ø¯'
+          example: 'محمد'
         patient_count:
           type: integer
           minimum: 1
@@ -851,40 +789,9 @@ components:
         total_candidates:
           type: integer
           minimum: 0
-
-    FirstNameCandidate:
-      type: object
-      x-status: proposed
-      required:
-      - first_name
-      - patient_count
-      properties:
-        first_name:
-          type: string
-        patient_count:
-          type: integer
-          minimum: 1
-
-    FirstNameCandidatesResponse:
-      type: object
-      x-status: implemented
-      required:
-      - last_name
-      - candidates
-      - total_candidates
-      properties:
-        success:
-          type: boolean
-          example: true
-        last_name:
-          type: string
-        candidates:
-          type: array
-          items:
-            $ref: '#/components/schemas/FirstNameCandidate'
-        total_candidates:
-          type: integer
-          minimum: 0
+          description: |
+            Number of distinct candidates before `limit` is applied, so a
+            caller can show "showing 50 of 120".
 
     ErVisit:
       type: object
