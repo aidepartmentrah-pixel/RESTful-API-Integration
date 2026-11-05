@@ -3,7 +3,7 @@
     {
       "name": "v1.1 (stable)",
       "composeProject": "mock-v11",
-      "workingDirectory": "C:\\Users\\you\\Documents\\GitHub\\RESTful-API-Integration-v1.1",
+      "workingDirectory": "C:\\Users\\you\\Documents\\GitHub\\RESTful-API-Integration-versions\\v1.1",
       "port": 6000
     },
     {
@@ -11,6 +11,12 @@
       "composeProject": "mock-v12-dev",
       "workingDirectory": "C:\\Users\\you\\Documents\\GitHub\\RESTful-API-Integration",
       "port": 6001
+    },
+    {
+      "name": "v1.3-dev",
+      "composeProject": "mock-v13-dev",
+      "workingDirectory": "C:\\Users\\you\\Documents\\GitHub\\RESTful-API-Integration-versions\\v1.3",
+      "port": 6002
     }
   ]
 }
