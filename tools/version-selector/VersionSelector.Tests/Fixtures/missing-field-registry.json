@@ -3,7 +3,7 @@
     {
       "name": "v1.1 (stable)",
       "composeProject": "mock-v11",
-      "workingDirectory": "C:\\fake\\RESTful-API-Integration-v1.1"
+      "workingDirectory": "C:\\fake\\RESTful-API-Integration-versions\\v1.1"
     }
   ]
 }

@@ -7,7 +7,7 @@ namespace VersionSelector.Tests;
 /// <summary>
 /// The one true end-to-end test: drives the real compiled EXE (real
 /// RealDockerRunner, no fake env vars) against the real mock-v11 worktree
-/// set up in Period A (../RESTful-API-Integration-v1.1, compose project
+/// (../RESTful-API-Integration-versions/v1.1, compose project
 /// "mock-v11", port 6000). Requires Docker Desktop running and that
 /// worktree present -- this is NOT part of the fast suite; run explicitly
 /// with `dotnet test --filter Category=Slow`.
@@ -41,13 +41,13 @@ public class UiSlowEndToEndTests
     private static string WriteRealRegistryFixture()
     {
         var repoRoot = FindRepoRoot();
-        var v11WorktreePath = Path.GetFullPath(Path.Combine(repoRoot, "..", "RESTful-API-Integration-v1.1"));
+        var v11WorktreePath = Path.GetFullPath(Path.Combine(repoRoot, "..", "RESTful-API-Integration-versions", "v1.1"));
 
         if (!Directory.Exists(v11WorktreePath))
         {
             throw new SkipException(
                 $"v1.1 worktree not found at {v11WorktreePath} -- set up Period A's " +
-                "`git worktree add ../RESTful-API-Integration-v1.1 v1.1.0` first.");
+                "`git worktree add ../RESTful-API-Integration-versions/v1.1 v1.1.0` first.");
         }
 
         var json = $$"""

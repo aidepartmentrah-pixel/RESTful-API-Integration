@@ -61,13 +61,28 @@ external dependencies and is safe to run anywhere, including CI.
 The **slow suite** is one test:
 `UiSlowEndToEndTests.StartAndStop_ThroughRealUi_ActuallyControlsThePort`.
 It drives the real compiled EXE against real Docker and the real `mock-v11`
-worktree from Period A (expects `../RESTful-API-Integration-v1.1` to
-exist, per that worktree setup) — clicks Stop through the real UI and
+worktree (expects `../RESTful-API-Integration-versions/v1.1` to
+exist, per the worktree layout below) — clicks Stop through the real UI and
 confirms port 6000 actually stops responding, then clicks Start and
 confirms it comes back. It leaves `mock-v11` running when it finishes
 (best-effort, in a `finally`), matching this repo's normal working state.
 Requires Docker Desktop running; skipped automatically if the v1.1
-worktree isn't present.
+worktree isn't present (so check the output says it *ran*, not skipped).
+
+### Worktree layout
+
+Each mock version is a git worktree of this repo, so all three can run at
+once on their own ports:
+
+```
+GitHub  RESTful-API-Integration\            main (v1.2-dev)  :6001  mock-v12-dev
+  RESTful-API-Integration-versions      v1.1\                            v1.1 (stable)    :6000  mock-v11
+      v1.3\                            v1.3-dev         :6002  mock-v13-dev
+```
+
+Move or remove a worktree with `git worktree move` / `git worktree remove`,
+never in File Explorer. Each worktree's `.env` sets `COMPOSE_PROJECT_NAME`,
+so `docker compose up` from inside it always targets the right project.
 
 ## What's deliberately not here
 
