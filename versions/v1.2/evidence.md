@@ -1,44 +1,38 @@
 # Evidence behind v1.2
 
-Unlike `versions/v1.1/evidence.md`, none of this version has real-server
-evidence — it's proposals, not confirmed vendor behavior, **even after
-Period D built them in the mock.** "Implemented" below means implemented
-*in this mock only*; it is not evidence the real vendor system behaves
-this way, or that 3iSoft has agreed to build it. That distinction is
-stated plainly per item rather than implied.
+v1.2 was delivered by 3iSoft ("HIS API — v1.2 Additions", 18 Nov 2026) and
+tested on the **real servers** the same day, from the hospital's offline
+PC, with `offline_test_kit/` (about 80 checks, written from 3iSoft's
+document). The mock was then changed to match.
 
 | Item | Confidence | Source |
 |---|---|---|
-| `GET /patients/father-names` | **MOCK_ONLY** — implemented and verified against this mock's own seed data; never sent to the real server | `tests/test_father_names.py`; live-verified against `localhost:6001` |
-| `Worker.section_name` / `administration_name` | **MOCK_ONLY** — the mock's `department_name` convention (a plain stored display-name column, confirmed real behavior for that specific field, see `versions/v1.1/evidence.md`) was extended to `section`/`administration` by analogy, not by direct observation of the real system exposing these | `tests/test_worker_section_administration_names.py`; live-verified against `localhost:6001` |
-| `GET /er/current-visits` | **MOCK_ONLY** — sourced today from a separate, non-JSON system ("meraj"); this is a new-resource ask, not a gap in existing behavior. `gender`/`age`/`chief_complaint` are entirely invented for mock realism — the requirement doc flags all three as open items, not vendor-confirmed shapes | `tests/test_er_current_visits.py`; live-verified against `localhost:6001` |
+| `GET /patients/father-names` | **REAL_SERVER_VERIFIED** — fields, sorting, `total_candidates` vs `limit`, both 422 messages, no-match 200, Arabic UTF-8, 401 | Offline run 18 Nov 2026 11:26, all Part 2A checks PASS |
+| `GET /hr-workers`, `/hr-workers/{id}` | **REAL_SERVER_VERIFIED** — 12 fields, paging, 404, 422 limits, filters (hierarchy, spelling unification, AND, unknown/empty name), 401. 1748 workers; 81 of the first 500 have no administration | Offline run 18 Nov 2026, all Part 2B checks PASS |
+| `/workers` unchanged | **REAL_SERVER_VERIFIED** — no section/administration names | Offline run, Part 1 INFO |
+| ER `GET /current-visits` | **PARTLY VERIFIED** — on `meraj:8080/his-er/api/er/v1`; answers 401 `UNAUTHORIZED` without a key and rejects the Directory key. **Field checks not run yet: no ER key.** | Offline run 18 Nov 2026 11:26 (ER without key PASS; with Directory key 401); browser check of meraj |
+| ER on malin | **REAL_SERVER_OBSERVED** — `malin:8080/his-er/...` returns HTTP 500 with a non-JSON page, with or without a key | Offline run 18 Nov 2026 11:05 |
+| `/health` | `api_version` still reports `1.0.0` on the real server | Offline run, Part 1 INFO |
 
-## What this means for the acceptance tests
+The mock's ER fields (Arabic gender, age, free-text complaint, Beirut
+offset) follow 3iSoft's document; they become REAL_SERVER_VERIFIED once the
+ER key arrives and the offline test's Part 2C passes.
 
-`acceptance_tests/verify_v1.2_contract.ps1` reports each of these 3 items
-as its own line: `PASS`, `FAIL`, or `NOT-YET-IMPLEMENTED` — never a blanket
-pass/fail for the whole version. As of the end of Period D, a run against
-`localhost:6001` reads:
+## Test runs
 
-```
-father-names:           PASS
-worker-section-admin:   PASS
-er-current-visits:      PASS
-```
+| When | Target | Result |
+|---|---|---|
+| 18 Nov 2026 11:05 | real (ER on malin) | 69 passed, 2 failed — ER 500 |
+| 18 Nov 2026 11:26 | real (ER on meraj) | 70 passed, 1 failed — ER key missing |
+| 18 Nov 2026 | mock v1.2-dev (port 6001), after matching | 83 passed, 0 failed |
 
-Before Period D, the later items correctly read `NOT-YET-IMPLEMENTED` — that
-was the expected state at that stage, not a bug.
+The test itself was checked against a stand-in built from 3iSoft's
+document, broken in 12 different ways (sorting, totals, messages, fields,
+hierarchy, spelling, empty filter, ER order/fields/encoding/key/offset):
+every break was caught.
 
 ## Dropped items (4 Nov 2026 meeting)
 
-`GET /patients/first-names` and `Patient.encounter_type` were removed from
-v1.2 — see the README's *Dropped* section. Their mock implementations and
-tests were deleted with them; `tests/test_v1_2_dropped_items.py` guards
+`GET /patients/first-names` and `Patient.encounter_type` — see the
+README's *Dropped* section. `tests/test_v1_2_dropped_items.py` guards
 against either coming back.
-
-## Open items carried forward from v1.1
-
-The structured `first_name`/`father_name`/`last_name` search shape
-still hasn't been tested against the real server (see
-`versions/v1.1/evidence.md`). Everything built on top of it in v1.2
-(`father-names`) inherits that same open question.

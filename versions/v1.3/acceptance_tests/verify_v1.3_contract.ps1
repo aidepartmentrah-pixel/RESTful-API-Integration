@@ -1,6 +1,9 @@
 param(
     [string]$BaseUrl = "http://localhost:6002/api/directory/v1",
     [string]$ApiKey = "",
+    # The ER API (3iSoft v1.2): its own address and its own key.
+    [string]$ErBaseUrl = "http://localhost:6002/his-er/api/er/v1",
+    [string]$ErApiKey = "",
     # Opt-in: stops the mock's Postgres container, checks both endpoints answer 503
     # (never 200 with an empty list), then starts it again.
     [switch]$CheckSourceDown,
@@ -22,6 +25,13 @@ if (-not $ApiKey) {
     }
 }
 if (-not $ApiKey) { Write-Host "No API key: pass -ApiKey or put API_KEY in the repo .env" -ForegroundColor Red; exit 2 }
+if (-not $ErApiKey) {
+    $EnvFile = Join-Path $Root ".env"
+    if (Test-Path $EnvFile) {
+        $Line = Get-Content $EnvFile | Where-Object { $_ -match '^ER_API_KEY=' } | Select-Object -First 1
+        if ($Line) { $ErApiKey = $Line.Substring(11) }
+    }
+}
 
 $World = Get-Content (Join-Path $Root "seed\bci_test_world.json") -Raw -Encoding UTF8 | ConvertFrom-Json
 $Records = @($World.patients)
@@ -31,9 +41,9 @@ $FailCount = 0
 $Features = @{}
 
 function Invoke-Api {
-    param([string]$Path, [string]$Key = $ApiKey, [switch]$NoKey)
+    param([string]$Path, [string]$Key = $ApiKey, [switch]$NoKey, [string]$Base = $BaseUrl)
     $Result = [PSCustomObject]@{ StatusCode = $null; Body = $null; Raw = $null }
-    $Request = [System.Net.HttpWebRequest]::Create("$BaseUrl$Path")
+    $Request = [System.Net.HttpWebRequest]::Create("$Base$Path")
     $Request.Method = "GET"
     $Request.Timeout = 10000
     $Request.Accept = "application/json"
@@ -86,8 +96,8 @@ $R = Invoke-Api "/patients/10001" -NoKey
 Assert-Check "smoke" "a directory route without a key is 401" ($R.StatusCode -eq 401)
 $R = Invoke-Api "/patients/10001"
 Assert-Check "smoke" "a directory patient is still found" ($R.StatusCode -eq 200 -and $R.Body.patient_id -eq "10001")
-$R = Invoke-Api "/er/current-visits"
-Assert-Check "smoke" "v1.2 er/current-visits still answers" ($R.StatusCode -eq 200 -and $R.Body.success -eq $true)
+$R = Invoke-Api "/current-visits" -Base $ErBaseUrl -Key $ErApiKey
+Assert-Check "smoke" "v1.2 ER API current-visits answers (own address, own key)" ($R.StatusCode -eq 200 -and $R.Body.success -eq $true) "(got $($R.StatusCode))"
 $R = Invoke-Api "/patients/9999.100001"
 Assert-Check "smoke" "test-world patients are NOT in the directory patients table" ($R.StatusCode -eq 404)
 

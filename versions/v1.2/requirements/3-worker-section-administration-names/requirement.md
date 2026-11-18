@@ -1,5 +1,12 @@
 # Proposed addendum to OpenAPI v1.1 — worker section/administration names
 
+> **Delivered differently** (3iSoft, 18 Nov 2026): not as new fields on
+> `/workers` (which is unchanged), but as a new endpoint `GET /hr-workers`
+> (+ `/hr-workers/{employee_id}`) giving each worker's administration,
+> section and department from the HR tree, with filters by unit name.
+> Verified on the real server. This document is our original request;
+> the contract is in `../../Hospital_Directory_API_OpenAPI_v1.2.yaml`.
+
 ## 1. The problem this solves
 
 `GET /workers` and `GET /workers/{employee_id}` already return `section_id`

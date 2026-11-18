@@ -1,0 +1,19 @@
+# Hospital Directory API v1.2 - test settings
+# Edit the values after "=" and save. Lines starting with # are ignored.
+# Arabic names are fine (save as UTF-8, which Notepad does by default).
+
+# Our v1.2-dev mock on this PC (port 6001), same paths as the real servers.
+
+# ---- Directory API (patients, doctors, workers, father-names, hr-workers)
+BaseUrl = http://localhost:6001/his-general/api/directory/v1
+ApiKey = dev-secret-key
+
+# ---- ER API (current ER visits): its own address and its own key.
+# Only up to /v1 - the test adds /current-visits itself.
+ErBaseUrl = http://localhost:6001/his-er/api/er/v1
+ErApiKey = dev-secret-key
+
+# ---- A patient who REALLY exists on the server (exact names as stored).
+PatientFirstName = عبد العليم
+PatientFatherName = فخر
+PatientLastName = الخرافي

@@ -17,9 +17,10 @@ class Worker(Base):
     department_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
     department_name: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
     section_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
-    section_name: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
     administration_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
-    administration_name: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
+    # 3iSoft v1.2 /hr-workers: the HR unit of the worker's current basic job.
+    # Administration/section/department are found by walking up hr_units.
+    hr_unit_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
 
     is_manager: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, index=True)

@@ -48,7 +48,7 @@ def get_father_name_candidates(
     db: DbSession,
     first_name: Annotated[str | None, Query(min_length=1)] = None,
     last_name: Annotated[str | None, Query(min_length=1)] = None,
-    limit: Annotated[int, Query(ge=1, le=200)] = 50,
+    limit: Annotated[int, Query()] = 50,
 ) -> FatherNameCandidatesResponse:
     candidates, total = patient_service.get_father_name_candidates(
         db, first_name, last_name, limit

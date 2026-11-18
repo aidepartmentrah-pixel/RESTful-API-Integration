@@ -24,3 +24,12 @@ the `v1.1.0` git tag, port 6000 in this project's local dev setup):
 ```
 
 No open items for this version — it is not under active change.
+
+## Maintenance (18 Nov 2026)
+
+The v1.1 mock (port 6000) runs from branch `v1.1-maint` (starts at the
+v1.1 contract commit `5924328`). One change: it also answers on the real
+Directory path `/his-general/api/directory/v1`, so clients switch between
+mock and real (`http://malin:8080/his-general/api/directory/v1`) by
+changing only the host. Its key is now `dev-secret-key`, like the real
+server. The contract itself is unchanged.

@@ -10,6 +10,7 @@ from app.main import app
 from app.models import Doctor, Patient, Worker
 
 TEST_API_KEY = "test-api-key"
+TEST_ER_API_KEY = "test-er-api-key"
 
 engine = create_engine(
     "sqlite:///:memory:",
@@ -22,6 +23,7 @@ TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engin
 @pytest.fixture(autouse=True)
 def _configure_settings(monkeypatch):
     monkeypatch.setenv("API_KEY", TEST_API_KEY)
+    monkeypatch.setenv("ER_API_KEY", TEST_ER_API_KEY)
     get_settings.cache_clear()
     yield
     get_settings.cache_clear()
@@ -102,3 +104,8 @@ def client(db_session):
 @pytest.fixture()
 def auth_headers():
     return {"X-API-Key": TEST_API_KEY}
+
+
+@pytest.fixture()
+def er_headers():
+    return {"X-API-Key": TEST_ER_API_KEY}

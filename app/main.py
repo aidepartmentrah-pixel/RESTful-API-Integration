@@ -3,7 +3,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from app.api import bci_radiology, doctors, er, health, patients, workers
+from app.api import bci_radiology, doctors, er, health, hr_workers, patients, workers
 from app.core.errors import ApiError
 
 
@@ -13,23 +13,28 @@ class UTF8JSONResponse(JSONResponse):
 
 app = FastAPI(
     title="Hospital Directory Read API",
-    version="1.1.0",
-    description="Read-only internal API for patients, doctors, and workers. "
-    "Used by HCAT and HCopilot.",
-    openapi_url="/api/directory/v1/openapi.json",
-    docs_url="/api/directory/v1/docs",
-    redoc_url="/api/directory/v1/redoc",
+    version="1.2.0",
+    description="Mock of 3iSoft's read-only Directory API (and, on its own path, the ER API), "
+    "as delivered in v1.2. Used by HCAT and HCopilot.",
+    openapi_url="/his-general/api/directory/v1/openapi.json",
+    docs_url="/his-general/api/directory/v1/docs",
+    redoc_url="/his-general/api/directory/v1/redoc",
     default_response_class=UTF8JSONResponse,
 )
 
-API_PREFIX = "/api/directory/v1"
+# The real Directory API path (malin:8080), and the mock's original path kept
+# working so nothing that already uses it breaks. Only the real path is
+# listed in the OpenAPI document.
+API_PREFIX = "/his-general/api/directory/v1"
+LEGACY_API_PREFIX = "/api/directory/v1"
+# The ER API: a separate 3iSoft application with its own key (meraj:8080).
+ER_API_PREFIX = "/his-er/api/er/v1"
 
-app.include_router(health.router, prefix=API_PREFIX)
-app.include_router(patients.router, prefix=API_PREFIX)
-app.include_router(doctors.router, prefix=API_PREFIX)
-app.include_router(workers.router, prefix=API_PREFIX)
-app.include_router(er.router, prefix=API_PREFIX)
-app.include_router(bci_radiology.router, prefix=API_PREFIX)
+for _router in (health.router, patients.router, doctors.router, workers.router, hr_workers.router,
+                bci_radiology.router):
+    app.include_router(_router, prefix=API_PREFIX)
+    app.include_router(_router, prefix=LEGACY_API_PREFIX, include_in_schema=False)
+app.include_router(er.router, prefix=ER_API_PREFIX)
 
 
 @app.exception_handler(ApiError)

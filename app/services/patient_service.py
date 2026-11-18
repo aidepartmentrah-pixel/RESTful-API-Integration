@@ -58,5 +58,12 @@ def get_father_name_candidates(
             error="VALIDATION_ERROR",
             message="Both 'first_name' and 'last_name' are required",
         )
+    if not 1 <= limit <= 200:
+        # 3iSoft's exact message (v1.2 delivered document).
+        raise ApiError(
+            status_code=422,
+            error="VALIDATION_ERROR",
+            message="limit must be between 1 and 200",
+        )
     return patient_repository.get_father_name_candidates(db, first_name, last_name, limit)
 

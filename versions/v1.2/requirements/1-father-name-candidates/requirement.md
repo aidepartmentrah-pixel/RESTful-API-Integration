@@ -1,5 +1,9 @@
 # Proposed addendum to OpenAPI v1.1 — father-name candidate lookup
 
+> **Delivered as asked** (3iSoft, 18 Nov 2026) and verified on the real
+> server. One detail from their document: an out-of-range `limit` returns
+> `422` with the message `limit must be between 1 and 200`. See `../../README.md`.
+
 ## 1. Proposed endpoint
 
 ### `GET /patients/father-names`

@@ -62,6 +62,25 @@ The v1.2 scope cut was merged into this branch. Two consequences:
   are gone from the v1.3 spec too, and `father-names` carries the agreed
   rules (ties ordered, `total_candidates` counted before `limit`).
 
+## v1.2 as delivered by 3iSoft, merged in (18 Nov 2026)
+
+v1.3 now carries v1.2 **as 3iSoft delivered it** (see `../v1.2/README.md`):
+
+- `GET /hr-workers` (+ `/{employee_id}`) — the HR tree, name filters.
+- The ER roster is on the separate **ER API**: `/his-er/api/er/v1/current-visits`
+  with its own key (`ER_API_KEY` in `.env`); the old Directory-API path is gone.
+- `/workers` is back to the v1.1 fields.
+- The real Directory path `/his-general/api/directory/v1` works, and so does
+  `/api/directory/v1` (the BCI endpoints answer on both; BCI clients use the
+  latter today).
+- Migrations: v1.2's `0008_hr` and v1.3's BCI `0008` both revise `0007`;
+  merge revision `0009` joins them (one head).
+
+The acceptance script's smoke check now calls the ER API (own address and
+key). Checked: pytest 85 passed, `verify_v1.3_contract.ps1` 23/0, the v1.2
+offline test kit against port 6002 84/0, BCI connector and test-data suites
+pass.
+
 ## Running and testing
 
 ```

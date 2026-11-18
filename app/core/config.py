@@ -10,6 +10,8 @@ class Settings(BaseSettings):
     api_port: int = 8000
     database_url: str = "postgresql://hospital:hospital@postgres:5432/hospital_directory"
     api_key: str = "change_me"
+    # 3iSoft v1.2: the ER API has its own key, separate from the Directory key.
+    er_api_key: str = "change_me"
 
 
 @lru_cache
