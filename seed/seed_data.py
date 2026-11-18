@@ -9,7 +9,7 @@ from faker import Faker
 from sqlalchemy import select
 
 from app.core.database import Base, SessionLocal, engine
-from app.models import Doctor, ErVisit, Patient, Worker
+from app.models import Doctor, ErVisit, HrUnit, Patient, Worker
 
 SEED = 42
 random.seed(SEED)
@@ -181,9 +181,9 @@ def seed_workers(db) -> None:
         job_title = random.choice(JOB_TITLES)
         department_id, department_name = random.choice(DEPARTMENTS)
         has_department = random.random() < 0.85
-        section_id, section_name = random.choice(SECTIONS)
+        section_id, _section_name = random.choice(SECTIONS)
         has_section = random.random() < 0.85
-        administration_id, administration_name = random.choice(ADMINISTRATIONS)
+        administration_id, _administration_name = random.choice(ADMINISTRATIONS)
         has_administration = random.random() < 0.85
         is_active = random.random() < 0.85
         is_manager = random.choice([True, False]) if random.random() < 0.8 else None
@@ -197,9 +197,7 @@ def seed_workers(db) -> None:
                 department_id=department_id if has_department else None,
                 department_name=department_name if has_department else None,
                 section_id=section_id if has_section else None,
-                section_name=section_name if has_section else None,
                 administration_id=administration_id if has_administration else None,
-                administration_name=administration_name if has_administration else None,
                 is_manager=is_manager,
                 is_active=is_active,
             )
@@ -207,12 +205,8 @@ def seed_workers(db) -> None:
 
 
 def seed_er_visits(db) -> None:
-    """PROPOSED v1.2 resource -- see
-    versions/v1.2/requirements/5-er-current-visits-hcopilot/requirement.md.
-    gender/age/chief_complaint are invented for mock realism; the
-    requirement doc flags all three as open items never confirmed by the
-    vendor, so nothing here should be read as a claim about their real shape.
-    """
+    """ER visits in the shape 3iSoft delivered (v1.2): Arabic names, gender
+    as the Arabic word, age in whole years or null, free-text complaint."""
     now = datetime.now(TZ)
     for index in range(1, 19):
         er_visit_id = str(48200 + index)
@@ -220,7 +214,7 @@ def seed_er_visits(db) -> None:
         father_name = fake_ar.first_name_male()
         last_name = fake_ar.last_name()
         arrival_time = now - timedelta(minutes=random.randint(5, 480))
-        gender = random.choice(["Male", "Female", None])
+        gender = random.choice([GENDER_MALE_AR, GENDER_FEMALE_AR, None])
         age = random.randint(1, 95) if random.random() < 0.8 else None
         chief_complaint = random.choice(CHIEF_COMPLAINTS) if random.random() < 0.85 else None
 
@@ -238,6 +232,71 @@ def seed_er_visits(db) -> None:
         )
 
 
+# ---------------------------------------------------------------------------
+# v1.2 as delivered by 3iSoft (18 Nov 2026). Idempotent: runs on fresh and on
+# existing databases (the migrate step calls it every start).
+
+GENDER_MALE_AR = "ذكر"
+GENDER_FEMALE_AR = "انثى"
+
+# (unit_id, name, level, parent_unit_id, is_active). Names deliberately include
+# hamza/ta-marbuta spellings, one name used twice, and one inactive unit, so the
+# /hr-workers filter rules have something to bite on.
+HR_TREE = [
+    ("6080.241", "الإدارة الطبية", "administration", None, True),
+    ("6080.243", "دائرة التمريض", "section", "6080.241", True),
+    ("6080.245", "قسم الطوارئ", "department", "6080.243", True),
+    ("6080.246", "قسم العناية الفائقة", "department", "6080.243", True),
+    ("6080.250", "دائرة الأطباء", "section", "6080.241", True),
+    ("6080.251", "قسم الجراحة العامة", "department", "6080.250", True),
+    ("6080.252", "قسم الأشعة", "department", "6080.250", True),
+    ("6080.300", "الإدارة المالية", "administration", None, True),
+    ("6080.301", "دائرة المحاسبة", "section", "6080.300", True),
+    ("6080.302", "قسم الرواتب", "department", "6080.301", True),
+    ("6080.303", "قسم الأرشيف", "department", "6080.301", True),
+    ("6080.310", "دائرة المشتريات", "section", "6080.300", True),
+    ("6080.400", "الإدارة العامة", "administration", None, True),
+    ("6080.401", "دائرة الموارد البشرية", "section", "6080.400", True),
+    ("6080.402", "قسم شؤون الموظفين", "department", "6080.401", True),
+    ("6080.403", "قسم الأرشيف", "department", "6080.401", True),
+    ("6080.404", "قسم التدريب القديم", "department", "6080.401", False),
+]
+
+
+def ensure_v1_2_delivered_data(db) -> None:
+    changed = False
+    if db.execute(select(HrUnit.id).limit(1)).first() is None:
+        for unit_id, name, level, parent, active in HR_TREE:
+            db.add(HrUnit(unit_id=unit_id, name=name, level=level, parent_unit_id=parent, is_active=active))
+        changed = True
+
+    workers = db.execute(select(Worker).order_by(Worker.employee_id)).scalars().all()
+    if workers and all(w.hr_unit_id is None for w in workers):
+        rng = random.Random(SEED)
+        departments = [u for u in HR_TREE if u[2] == "department"]
+        sections = [u for u in HR_TREE if u[2] == "section"]
+        administrations = [u for u in HR_TREE if u[2] == "administration"]
+        for worker in workers:
+            roll = rng.random()
+            if roll < 0.72:
+                worker.hr_unit_id = rng.choice(departments)[0]      # usual case: in a department
+            elif roll < 0.82:
+                worker.hr_unit_id = rng.choice(sections)[0]         # placed directly in a section
+            elif roll < 0.86:
+                worker.hr_unit_id = rng.choice(administrations)[0]  # directly in an administration
+            # else: no unit (the real server has workers without one too)
+        changed = True
+
+    for visit in db.execute(select(ErVisit).where(ErVisit.gender.in_(["Male", "Female"]))).scalars().all():
+        visit.gender = GENDER_MALE_AR if visit.gender == "Male" else GENDER_FEMALE_AR
+        changed = True
+
+    if changed:
+        db.commit()
+        print("v1.2 delivered data ensured (HR tree, worker units, Arabic ER gender).")
+
+
+
 def main() -> None:
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
@@ -245,6 +304,7 @@ def main() -> None:
         existing = db.execute(select(Patient.id).limit(1)).first()
         if existing:
             print("Seed data already present. Skipping.")
+            ensure_v1_2_delivered_data(db)
             return
 
         seed_patients(db)
@@ -252,6 +312,7 @@ def main() -> None:
         seed_workers(db)
         seed_er_visits(db)
         db.commit()
+        ensure_v1_2_delivered_data(db)
         print("Seed data inserted successfully.")
     finally:
         db.close()

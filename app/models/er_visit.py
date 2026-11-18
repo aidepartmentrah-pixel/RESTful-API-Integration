@@ -7,11 +7,8 @@ from app.core.database import Base
 
 
 class ErVisit(Base):
-    """PROPOSED v1.2 resource -- see
-    versions/v1.2/requirements/5-er-current-visits-hcopilot/requirement.md.
-    Sourced today from a separate non-JSON system ("meraj"); modelled here
-    only so HCopilot can develop against a stand-in while that ask is
-    pending with the vendor."""
+    """ER visit as 3iSoft delivered it (v1.2): served by the separate ER API
+    (/his-er/api/er/v1/current-visits, own key) - on meraj in production."""
 
     __tablename__ = "er_visits"
 
@@ -19,16 +16,15 @@ class ErVisit(Base):
 
     er_visit_id: Mapped[str] = mapped_column(String(64), nullable=False, unique=True, index=True)
 
-    first_name: Mapped[str] = mapped_column(String(128), nullable=False)
-    father_name: Mapped[str] = mapped_column(String(128), nullable=False)
-    last_name: Mapped[str] = mapped_column(String(128), nullable=False)
+    first_name: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    father_name: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    last_name: Mapped[str | None] = mapped_column(String(128), nullable=True)
 
-    # Timezone-aware; stored as the vendor is assumed (not confirmed) to
-    # write it -- UTC+3. See requirement.md open item 1.
+    # Timezone-aware. 3iSoft returns it with the server's offset (Asia/Beirut).
     arrival_time: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
 
-    # All three are open items in the requirement doc -- shape unconfirmed,
-    # so kept plain/nullable rather than guessed at.
+    # 3iSoft: gender is the Arabic word (male/female) or a raw code; age in whole
+    # years from the birth date; chief_complaint is the free-text attendance notes.
     gender: Mapped[str | None] = mapped_column(String(32), nullable=True)
     age: Mapped[int | None] = mapped_column(Integer, nullable=True)
     chief_complaint: Mapped[str | None] = mapped_column(String(255), nullable=True)

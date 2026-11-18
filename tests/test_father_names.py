@@ -115,3 +115,14 @@ def test_father_name_candidates_rejects_whitespace_only_names(client, auth_heade
     )
     assert response.status_code == 422
     assert response.json()["error"] == "VALIDATION_ERROR"
+
+
+def test_father_name_limit_out_of_range_uses_3isoft_message(client, auth_headers):
+    for limit in (0, 201):
+        response = client.get(
+            "/his-general/api/directory/v1/patients/father-names",
+            params={"first_name": "Zaid", "last_name": "Shared", "limit": limit},
+            headers=auth_headers,
+        )
+        assert response.status_code == 422
+        assert response.json() == {"error": "VALIDATION_ERROR", "message": "limit must be between 1 and 200"}

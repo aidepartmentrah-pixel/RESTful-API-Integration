@@ -1,5 +1,14 @@
 # Proposed new endpoint — live ER visit roster (for HCopilot)
 
+> **Delivered differently** (3iSoft, 18 Nov 2026): as `GET /current-visits`
+> on a separate **ER API**, `http://meraj:8080/his-er/api/er/v1`, with its
+> **own key** — not on the Directory API. Answers our open items: gender is
+> `ذكر`/`انثى` (or a raw code), age in whole years, complaint is free text,
+> every field always present. Still open: which ER states count as "in the
+> ER" (only "in preparation" is listed), whether visit time = arrival,
+> and a `503` for an unreachable source. This document is our original
+> request; the contract is in `../../Hospital_Directory_API_OpenAPI_v1.2.yaml`.
+
 ## 1. Context
 
 HCopilot currently requires a nurse to manually search for and select a

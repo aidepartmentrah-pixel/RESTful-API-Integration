@@ -26,7 +26,7 @@ def test_patient_has_no_encounter_type(client, auth_headers):
 
 
 def test_openapi_does_not_publish_dropped_items(client):
-    spec = client.get("/api/directory/v1/openapi.json").json()
+    spec = client.get("/his-general/api/directory/v1/openapi.json").json()
     assert not any(path.endswith("/patients/first-names") for path in spec["paths"])
     patient_props = spec["components"]["schemas"]["Patient"]["properties"]
     assert "encounter_type" not in patient_props

@@ -1,35 +1,48 @@
 openapi: 3.0.3
 info:
   title: Hospital Directory Read API
-  version: 1.2.0-draft
+  version: 1.2.0
   description: |
     Read-only internal API for patients, doctors, and workers. Used by HCAT and HCopilot.
 
-    This is a PROPOSED next version, authored by the API's consumer (not
-    3iSoft) as a formal, testable ask — see `../v1.2/requirements/` for
-    the rationale behind each addition and `../v1.2/evidence.md` for what
-    is and isn't backed by real-server testing. Every path and field below
-    carries an `x-status` of either `implemented` (already built and
-    verified in the reference mock) or `proposed` (not yet built anywhere,
-    including the mock, until 3iSoft accepts and/or it's actually needed).
+    **v1.2 as DELIVERED by 3iSoft** ("HIS API - v1.2 Additions", 18 Nov 2026)
+    and verified on the real servers the same day (offline test kit:
+    `offline_test_kit/`, 70 passed / 1 failed - the only failure was the
+    missing ER key). What v1.2 added on top of v1.1:
 
-    v1.2 asks for 3 additions: `GET /patients/father-names`, Worker
-    `section_name`/`administration_name`, and `GET /er/current-visits`.
-    Dropped in the 4 Nov 2026 meeting: `GET /patients/first-names`
-    (family-name search returns far too many names to be useful) and
-    `Patient.encounter_type` (not recorded in the source system).
+      - `GET /patients/father-names` - as we proposed.
+      - `GET /hr-workers`, `GET /hr-workers/{employee_id}` - NEW endpoint.
+        We had asked for section/administration names on `/workers`;
+        3iSoft built the HR hierarchy as its own endpoint instead, and
+        `/workers` is unchanged from v1.1.
+      - `GET /current-visits` on the separate **ER API**
+        (`/his-er/api/er/v1`, its **own key**) - not on the Directory API.
+
+    `x-status`: `implemented` = in production since v1.1; `delivered` =
+    added by 3iSoft in v1.2 and verified on the real server.
+
+    Where things live (confirmed 18 Nov 2026):
+      - Directory API: `http://malin:8080/his-general/api/directory/v1`
+      - ER API: `http://meraj:8080/his-er/api/er/v1` (NOT malin)
+    The mock (v1.2-dev, port 6001) serves both on the same paths, plus the
+    mock's older `/api/directory/v1` prefix for compatibility.
+
+    Dropped before delivery (4 Nov 2026 meeting): `GET /patients/first-names`
+    and `Patient.encounter_type`.
 
     Transport notes:
-      - Every response is `application/json`.
+      - Every response is `application/json; charset=utf-8`.
       - All endpoints are GET; the API is strictly read-only.
       - Every endpoint except `/health` requires the `X-API-Key` header.
+      - The ER API uses a different key from the Directory API.
 
 servers:
+- url: http://malin:8080/his-general/api/directory/v1
+  description: Real Directory API (hospital network)
+- url: http://localhost:6001/his-general/api/directory/v1
+  description: Mock, v1.2-dev
 - url: http://localhost:18080/his-general/api/directory/v1
-  description: |
-    Development (Eclipse-managed WildFly, +10000 port offset).
-- url: https://TO-BE-ASSIGNED/his-general/api/directory/v1
-  description: Production API
+  description: 3iSoft developer machine (their documents use this)
 
 security:
 - ApiKeyAuth: []
@@ -45,15 +58,16 @@ tags:
   description: |
     Employee listing and lookup. Backed by the separate HR application (called
     over HTTP on the same WildFly instance), NOT by the his-general database.
-- name: ER
-  x-status: proposed
+- name: HR Workers
+  x-status: delivered
   description: |
-    PROPOSED, for HCopilot. Not an extension of the Directory API's own
-    data source — the ER roster currently lives behind a separate system
-    ("meraj", a JSF application, not JSON). This ask is for 3iSoft to
-    expose it as a new read-only resource on the same his-general Directory
-    API host/auth/conventions, regardless of where they source it
-    internally. See requirement 5 for the full rationale.
+    Workers with their place in the HR tree: administration (ادارة) >
+    section (دائرة) > department (قسم). Added by 3iSoft in v1.2.
+- name: ER
+  x-status: delivered
+  description: |
+    The ER API: a separate 3iSoft application (meraj:8080) with its own
+    key. Read-only live roster for HCopilot.
 
 paths:
   /health:
@@ -196,7 +210,7 @@ paths:
     get:
       tags:
       - Patients
-      x-status: implemented
+      x-status: delivered
       summary: List candidate father names for a first+last name pair
       description: |
         Returns the distinct father-name values on file among patients
@@ -252,9 +266,15 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-              example:
-                error: VALIDATION_ERROR
-                message: Both 'first_name' and 'last_name' are required
+              examples:
+                missing_name:
+                  value:
+                    error: VALIDATION_ERROR
+                    message: Both 'first_name' and 'last_name' are required
+                bad_limit:
+                  value:
+                    error: VALIDATION_ERROR
+                    message: limit must be between 1 and 200
         '500':
           $ref: '#/components/responses/ServerError'
 
@@ -391,30 +411,123 @@ paths:
         '503':
           $ref: '#/components/responses/ServiceUnavailable'
 
-  /er/current-visits:
+  /hr-workers:
+    get:
+      tags:
+      - HR Workers
+      x-status: delivered
+      summary: List workers with their HR administration / section / department
+      description: |
+        A worker's unit is the unit of their current basic job; the three
+        levels are found by walking up the HR tree from that unit. A worker
+        placed directly in a section has `department_*` null, and so on.
+
+        Filter rules:
+          - filters take the unit **name**, not the id;
+          - names are compared after trimming spaces and unifying spelling
+            (أ / إ / آ -> ا, ة -> ه, ى -> ي), so `الادارة الطبيه` matches
+            `الإدارة الطبية`;
+          - `administration` returns its workers and the workers of every
+            section / department under it; `section` likewise;
+          - several filters together are combined with AND;
+          - if two units share a name, workers of both are returned;
+          - inactive units still match and are still shown;
+          - an unknown name (or a name at the wrong level) returns an empty
+            list, not an error; an empty filter (`?section=`) is ignored;
+          - filtering happens before paging, so `total` counts the matches.
+      parameters:
+      - name: administration
+        in: query
+        required: false
+        description: Administration (ادارة) name.
+        schema:
+          type: string
+      - name: section
+        in: query
+        required: false
+        description: Section (دائرة) name.
+        schema:
+          type: string
+      - name: department
+        in: query
+        required: false
+        description: Department (قسم) name.
+        schema:
+          type: string
+      - $ref: '#/components/parameters/WorkerLimit'
+      - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: Workers page with their HR placement
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HrWorkerListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /hr-workers/{employee_id}:
+    get:
+      tags:
+      - HR Workers
+      x-status: delivered
+      summary: Get one worker with their HR placement
+      description: Same fields as a list item, no envelope.
+      parameters:
+      - name: employee_id
+        in: path
+        required: true
+        schema:
+          type: string
+          example: '6080.997'
+      responses:
+        '200':
+          description: Worker
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HrWorker'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: No such worker (error code `WORKER_NOT_FOUND`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /current-visits:
+    servers:
+    - url: http://meraj:8080/his-er/api/er/v1
+      description: Real ER API (hospital network) - on meraj, not malin
+    - url: http://localhost:6001/his-er/api/er/v1
+      description: Mock, v1.2-dev
     get:
       tags:
       - ER
-      x-status: proposed
-      x-servers-note: |
-        PROPOSED endpoint. Data currently lives behind a separate system
-        ("meraj", JSF, no JSON API today) — this ask ties it to the same
-        his-general Directory API host/auth/conventions regardless of
-        3iSoft's internal sourcing. See requirement 5 for full context.
+      x-status: delivered
+      security:
+      - ErApiKeyAuth: []
       summary: Live roster of patients currently in the ER (for HCopilot)
       description: |
-        PROPOSED — not yet implemented anywhere, including the mock.
-        Returns every patient currently present in the ER as a complete,
-        unpaginated snapshot (no `limit`/`offset` — the caller always gets
-        everything, since departure-detection via polling requires a
-        complete set each time, not a page of one).
-
-        See `requirements/5-er-current-visits-hcopilot/requirement.md` for
-        the full field-by-field format spec (timezone, gender/age/
-        chief_complaint open items, encoding).
+        Every active ER visit whose state is "in preparation", as one full
+        snapshot (no paging): the caller detects departures by comparing
+        the `er_visit_id`s of two calls. Ordered by `arrival_time`, earliest
+        first; equal times by visit id. Any field without a value is `null`
+        (never omitted). No patients is a normal `200` with an empty list.
       responses:
         '200':
-          description: Full current ER roster, ordered by arrival_time ascending.
+          description: Full current ER roster.
           content:
             application/json:
               schema:
@@ -422,22 +535,39 @@ paths:
               example:
                 success: true
                 items:
-                - er_visit_id: '48213'
-                  first_name: عباس
-                  father_name: محمد
-                  last_name: زهرالدين
-                  arrival_time: '2026-09-18T14:32:00+03:00'
-                  gender: null
-                  age: null
-                  chief_complaint: null
+                - er_visit_id: '8441'
+                  first_name: أحمد
+                  father_name: خليل
+                  last_name: منصور
+                  arrival_time: '2026-11-10T07:15:00+02:00'
+                  gender: ذكر
+                  age: 48
+                  chief_complaint: ألم في الصدر وضيق نفس
                 total: 1
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Wrong path (error code `NOT_FOUND`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '405':
+          description: Any method other than GET (error code `METHOD_NOT_ALLOWED`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '500':
           $ref: '#/components/responses/ServerError'
 
 components:
   securitySchemes:
+    ErApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: The ER API's own key - different from the Directory API key.
     ApiKeyAuth:
       type: apiKey
       in: header
@@ -603,23 +733,9 @@ components:
         section_id:
           type: string
           nullable: true
-        section_name:
-          type: string
-          nullable: true
-          x-status: proposed
-          description: |
-            PROPOSED, not yet implemented. Display name resolved from
-            `section_id`, same convention as `department_name`. See
-            `requirements/3-worker-section-administration-names/requirement.md`.
         administration_id:
           type: string
           nullable: true
-        administration_name:
-          type: string
-          nullable: true
-          x-status: proposed
-          description: |
-            PROPOSED, not yet implemented. Same convention as `section_name`.
         is_manager:
           type: boolean
           nullable: true
@@ -667,44 +783,125 @@ components:
             Number of distinct candidates before `limit` is applied, so a
             caller can show "showing 50 of 120".
 
+    HrWorker:
+      type: object
+      x-status: delivered
+      description: Every field is always present; null when not known.
+      required:
+      - employee_id
+      - full_name
+      - job_id
+      - job_title
+      - administration_id
+      - administration_name
+      - section_id
+      - section_name
+      - department_id
+      - department_name
+      - is_manager
+      - is_active
+      properties:
+        employee_id:
+          type: string
+          example: '6080.995'
+        full_name:
+          type: string
+          nullable: true
+          example: سامر خليل عيسى
+        job_id:
+          type: string
+          nullable: true
+        job_title:
+          type: string
+          nullable: true
+          example: ممرض
+        administration_id:
+          type: string
+          nullable: true
+        administration_name:
+          type: string
+          nullable: true
+          example: الإدارة الطبية
+        section_id:
+          type: string
+          nullable: true
+        section_name:
+          type: string
+          nullable: true
+          example: دائرة التمريض
+        department_id:
+          type: string
+          nullable: true
+        department_name:
+          type: string
+          nullable: true
+          example: قسم الطوارئ
+          description: |
+            The HR department (قسم). Not necessarily the same as
+            `Worker.department_name` on `/workers`, which comes from the
+            his-general Department table.
+        is_manager:
+          type: boolean
+          nullable: true
+        is_active:
+          type: boolean
+
+    HrWorkerListResponse:
+      allOf:
+      - $ref: '#/components/schemas/ListEnvelope'
+      - type: object
+        properties:
+          items:
+            type: array
+            items:
+              $ref: '#/components/schemas/HrWorker'
+
     ErVisit:
       type: object
-      x-status: proposed
+      x-status: delivered
+      description: Every field is always present; null when it has no value.
       required:
       - er_visit_id
       - first_name
       - father_name
       - last_name
       - arrival_time
+      - gender
+      - age
+      - chief_complaint
       properties:
         er_visit_id:
           type: string
-          description: Unique per ER visit. Opaque — treat as a plain string, do not parse.
+          description: Visit number as shown on the ER list page. Opaque - do not parse.
         first_name:
           type: string
+          nullable: true
         father_name:
           type: string
+          nullable: true
         last_name:
           type: string
+          nullable: true
         arrival_time:
           type: string
           format: date-time
-          description: ISO-8601 with timezone offset. Timezone to be confirmed with vendor (assumed UTC+3).
+          description: ISO 8601 with the server's offset (Asia/Beirut, +02:00 / +03:00).
         gender:
           type: string
           nullable: true
-          description: Shape not yet confirmed — do not assume it matches Patient.sex's format.
+          description: ذكر / انثى, or the raw code if it cannot be resolved.
         age:
           type: integer
           nullable: true
+          description: Whole years from the birth date; null if no birth date.
         chief_complaint:
           type: string
           nullable: true
-          description: Coded vs. free text not yet confirmed with vendor.
+          description: The visit's attendance notes (free text); null if empty.
 
     ErVisitListResponse:
       type: object
-      x-status: proposed
+      x-status: delivered
       required:
       - success
       - items
@@ -720,10 +917,7 @@ components:
         total:
           type: integer
           minimum: 0
-          description: |
-            No limit/offset by design — this endpoint always returns the
-            complete current snapshot, required for correct departure
-            detection via polling.
+          description: Number of items. No paging - always the full snapshot.
 
     PatientListResponse:
       allOf:
