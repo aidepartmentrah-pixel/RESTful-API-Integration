@@ -23,11 +23,13 @@ app = FastAPI(
 )
 
 API_PREFIX = "/api/directory/v1"
+# The real 3iSoft Directory API path (malin:8080). Served as well, so a client
+# can switch between this mock and the real server by changing only the host.
+REAL_API_PREFIX = "/his-general/api/directory/v1"
 
-app.include_router(health.router, prefix=API_PREFIX)
-app.include_router(patients.router, prefix=API_PREFIX)
-app.include_router(doctors.router, prefix=API_PREFIX)
-app.include_router(workers.router, prefix=API_PREFIX)
+for _router in (health.router, patients.router, doctors.router, workers.router):
+    app.include_router(_router, prefix=API_PREFIX)
+    app.include_router(_router, prefix=REAL_API_PREFIX, include_in_schema=False)
 
 
 @app.exception_handler(ApiError)
