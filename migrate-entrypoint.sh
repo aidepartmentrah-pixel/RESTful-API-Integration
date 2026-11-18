@@ -25,6 +25,9 @@ alembic upgrade head
 echo "Seeding development data..."
 python -m seed.seed_data
 
+echo "Loading the hand-written Arabic fixtures (idempotent)..."
+python -m seed.seed_muslim_arabic_fixtures
+
 echo "Seeding BCI test world (v1.3, invented 9999.* rows only)..."
 python -m seed.seed_bci_test_world
 
