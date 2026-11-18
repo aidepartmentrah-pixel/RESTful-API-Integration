@@ -25,4 +25,7 @@ alembic upgrade head
 echo "Seeding development data..."
 python -m seed.seed_data
 
+echo "Loading the hand-written Arabic fixtures (idempotent)..."
+python -m seed.seed_muslim_arabic_fixtures
+
 echo "Database initialization complete."
