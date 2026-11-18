@@ -13,12 +13,13 @@ evidence-backed ask. Nothing here is a commitment from the vendor.
   backed only by the field names of captured radiology pages.
 - Acceptance test: `acceptance_tests/verify_v1.3_contract.ps1`.
 
-## The 2 additions
+## The additions
 
 | # | Addition | Consumer | Status (this mock) |
 |---|---|---|---|
 | 1 | `GET /bci-radiology/visits/today` | BCI clinic platform | Implemented (mock) |
 | 2 | `GET /bci-radiology/patients/{mrn}` | BCI clinic platform | Implemented (mock) |
+| 3 | `GET /orthopedic-opd/visits/today` | Orthopedic OPD app | **Draft idea** (18 Nov 2026) — not designed, not in the spec or mock |
 
 ## Traceability matrix
 
@@ -26,6 +27,7 @@ evidence-backed ask. Nothing here is a commitment from the vendor.
 |---|---|---|---|
 | `requirements/1-bci-radiology-visits-today/` | `tests/test_bci_radiology_visits_today.py` | `bci-visits-today` line in `verify_v1.3_contract.ps1` | Implemented (mock), verified |
 | `requirements/2-bci-radiology-patient/` | `tests/test_bci_radiology_patient.py` | `bci-patient` line | Implemented (mock), verified |
+| `requirements/3-orthopedic-opd-visits-today/` | — | — | Draft: open questions in the requirement file |
 
 Kept in sync by hand with the `x-status` markers in the YAML.
 
